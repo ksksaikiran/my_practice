@@ -60,3 +60,47 @@ ls -l /mnt/backups/file_created_on_server.text     [On NFS client]
 To unmount the remote file system on the client-side.
 
 umount /mnt/backups
+
+
+
+
+
+
+
+
+NFS SERVER ON UBUNTU
+
+https://www.linuxtechi.com/install-nfs-server-on-ubuntu/
+
+10.0.1.238 server
+10.0.1.78 client
+
+On SERVER
+apt update
+apt install nfs-kernel-server
+systemctl start nfs-server
+systemctl status nfs-server
+mkdir /mnt/nfs_shares
+chown nfsnobody:nogroup /mnt/nfs_shares
+chmod 777 /mnt/nfs_shares
+vi /etc/exports add the below line
+/mnt/nfs_shares 10.0.1.78(ro,sync,no_subtree_chek)
+exportfs -avr
+exports -s
+
+
+On CLIENT:
+apt update
+apt install nfs-common
+mkdir /mnt/shares
+ showmount -e 10.0.1.238
+ vi /etc/fstab add below line
+ 10.0.1.238:/mnt/nfs_shares /mnt/shares defaults 0 0
+mount -t nfs 10.0.1.238:/mnt/nfs_shares /mnt/shares
+
+
+create the file in /mnt/nfs_shares on server machine
+verify in /mnt/shares  on client machine
+as you add the files in location /mnt/nfs_shares that will be reflected on client machine 
+
+ 
