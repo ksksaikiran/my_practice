@@ -1,0 +1,65 @@
+
+
+
+			TOMCAT 9 INSTALLATION
+			
+	sudo apt update
+	sudo apt install default-jdk
+	sudo groupadd tomcat
+	sudo useradd -s /bin/false -g tomcat -d /opt/tomcat tomcat
+	cd /tmp
+	curl -O https://mirrors.estointernet.in/apache/tomcat/tomcat-9/v9.0.50/bin/apache-tomcat-9.0.50.tar.gz
+	sudo mkdir /opt/tomcat
+	sudo tar xzvf apache-tomcat-*tar.gz -C /opt/tomcat --strip-components=1
+	cd /opt/tomcat
+	sudo chgrp -R tomcat /opt/tomcat
+	sudo chmod -R g+r conf
+	sudo chmod g+x conf
+	sudo chown -R tomcat webapps/ work/ temp/ logs/
+	sudo update-java-alternatives -l
+	java-1.11.0-openjdk-amd64       1081      " /usr/lib/jvm/java-1.11.0-openjdk-amd64"  <---- COPY THIS
+	sudo vi /etc/systemd/system/tomcat.service
+	
+[Unit]
+Description=Apache Tomcat Web Application Container
+After=network.target
+
+[Service]
+Type=forking
+
+Environment=JAVA_HOME=<COPY JAVA PATH HERE>
+Environment=CATALINA_PID=/opt/tomcat/temp/tomcat.pid
+Environment=CATALINA_HOME=/opt/tomcat
+Environment=CATALINA_BASE=/opt/tomcat
+Environment='CATALINA_OPTS=-Xms512M -Xmx1024M -server -XX:+UseParallelGC'
+Environment='JAVA_OPTS=-Djava.awt.headless=true -Djava.security.egd=file:/dev/./urandom'
+
+ExecStart=/opt/tomcat/bin/startup.sh
+ExecStop=/opt/tomcat/bin/shutdown.sh
+
+User=tomcat
+Group=tomcat
+UMask=0007
+RestartSec=10
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
+	sudo systemctl daemon-reload
+	sudo systemctl start tomcat
+	sudo systemctl status tomcat
+	sudo ufw allow 8080
+	sudo systemctl enable tomcat
+
+	sudo vi /opt/tomcat/conf/tomcat-users.xml
+	
+	For the Manager app, type:
+	sudo vi /opt/tomcat/webapps/manager/META-INF/context.xml
+
+	For the Host Manager app, type:
+	sudo vi /opt/tomcat/webapps/host-manager/META-INF/context.xml
+	
+	sudo systemctl restart tomcat
+

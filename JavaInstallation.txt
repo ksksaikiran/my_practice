@@ -1,0 +1,29 @@
+
+
+JAVA8 INSTALLATION
+
+
+sudo apt update
+sudo apt install openjdk-8-jdk
+
+for default version,
+ sudo apt install default-jdk
+ sudo apt install default-jre
+ sudo apt install default-jdk
+ 
+vi ~/.bash_profile
+# User specific environment and startup programs
+JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.302.b08-0.el8_4.x86_64/jre/bin/java
+export JAVA_HOME
+PATH=$PATH:$JAVA_HOME/bin
+ 
+ java -version
+ sudo update-alternatives --config java
+ apt install openjdk-8-jre-headless
+ sudo vi /etc/environment                  (add your java path, JAVA_PATH="/usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java")
+ source /etc/environment
+
+
+
+To uninstall:
+	sudo apt remove openjdk-8-jdk

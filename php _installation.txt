@@ -1,0 +1,43 @@
+
+
+Installphp-7.0 
+https://www.fosstechnix.com/install-php-7-on-ubuntu/
+https://www.itsupportwale.com/blog/install-php-in-ubuntu-18-04/#:~:text=%20How%20To%20Install%20PHP%20in%20Ubuntu%2018.04,3%20Step%203%3A%20Verify%20PHP%20installation%20More%20
+
+
+
+sudo apt -y install software-properties-common
+sudo add-apt-repository ppa:ondrej/php
+sudo apt-get update
+sudo apt list | grep php
+sudo apt -y install php7.0
+php -v
+sudo apt-get -y install php7.0-json
+
+All the PHP related configuration of apache server will exist in 
+/etc/php/7.4/apache2/php.ini
+
+sudo apt install php libapache2-mod-php
+sudo systemctl restart apache2
+sudo systemctl disable --now apache2
+sudo apt-get -y install php7.0-fpm nginx
+systemctl start php7.4-fpm
+systemctl start nginx
+systemctl enable php7.4-fpm
+systemctl enable nginx
+systemctl status php7.4-fpm
+systemctl status nginx
+
+All the PHP related configuration is present in  /etc/php/7.4/fpm/pool.d/www.conf
+
+create a php file in the path /var/www/html/<anyname>.php
+
+
+To update the version 
+
+sudo update-alternatives --config php
+
+
+
+
+

@@ -1,0 +1,37 @@
+										INSTALLING PHPMYADMIN
+										
+https://www.digitalocean.com/community/tutorials/how-to-install-and-secure-phpmyadmin-on-ubuntu-18-04
+
+Step 1 — Installing phpMyAdmin
+ sudo apt update
+ sudo apt install phpmyadmin php-mbstring php-gettext
+
+
+The installation process adds the phpMyAdmin Apache configuration file into the /etc/apache2/conf-enabled/ directory, 
+ where it is read automatically. The only thing you need to do is explicitly enable the mbstring PHP extension, which you can do by typing:
+ 
+ sudo phpenmod mbstring
+
+Afterwards, restart Apache for your changes to be recognized:
+
+ sudo systemctl restart apache2
+
+Step 2 — Adjusting User Authentication and Privileges
+-Configuring Password Access for the MySQL Root Account
+ sudo mysql
+ mysql > SELECT user,authentication_string,plugin,host FROM mysql.user;
+
+       > ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+       > FLUSH PRIVILEGES;
+	   > SELECT user,authentication_string,plugin,host FROM mysql.user;
+
+
+ sudo mysql
+ mysql -u root -p
+mysql > CREATE USER 'ctel'@'localhost' IDENTIFIED BY 'ctelctel@123';
+	  > GRANT ALL PRIVILEGES ON *.* TO 'ctel'@'localhost' WITH GRANT OPTION;
+	  
+	  
+http://your_domain_or_IP/phpmyadmin	  
+	  
+	  
