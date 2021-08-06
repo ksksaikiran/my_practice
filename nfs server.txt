@@ -1,0 +1,62 @@
+
+https://cloud.netapp.com/blog/azure-anf-blg-linux-nfs-server-how-to-set-up-server-and-client
+
+https://www.tecmint.com/install-nfs-server-on-centos-8/
+
+
+
+
+10.0.1.233 server
+10.0.1.108 client
+
+On server machine
+
+yum install nfs-utils
+systemctl start nfs-server.service
+systemctl enable nfs-server.service
+systemctl status nfs-server.service
+
+The configuration files for the NFS server are:
+
+/etc/nfs.conf – main configuration file for the NFS daemons and tools.
+/etc/nfsmount.conf – an NFS mount configuration file.
+
+mkdir -p  /mnt/nfs_shares/
+mkdir  -p /mnt/backups
+ls -l /mnt/nfs_shares/
+vi /etc/exports add these two lines
+/mnt/nfs_shares/			10.0.1.233/24(rw,sync)
+/mnt/backups				10.0.1.233/24(rw,sync,no_all_squash,root_squash)
+:wq
+
+exportfs -arv			-a flag means export or unexport all directories, -r means reexport all directories, synchronizing /var/lib/nfs/etab with /etc/exports, -v verbose
+
+exportfs  -s			To display the current export list
+ 
+yum install firewalld
+systemctl start firewalld
+firewall-cmd --permanent --add-service=nfs
+firewall-cmd --permanent --add-service=rpc-bind
+firewall-cmd --permanent --add-service=mountd
+firewall-cmd --reload
+
+On clinet system:
+
+yum install nfs-utils nfs4-acl-tools
+showmount -e 10.0.1.233
+mkdir -p /mnt/backups
+mount -t nfs  10.0.1.233:/mnt/backups /mnt/backups
+mount | grep nfs
+vi /etc/fstab and add below line
+10.20.20.8:/mnt/backups     /mnt/backups  nfs     defaults 0 0"
+cat /etc/fstab
+
+
+touch /mnt/backups/file_created_on_server.text     [On NFS Server]
+ls -l /mnt/backups/file_created_on_server.text     [On NFS client]
+
+
+
+To unmount the remote file system on the client-side.
+
+umount /mnt/backups

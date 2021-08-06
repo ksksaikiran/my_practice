@@ -1,0 +1,227 @@
+			
+			
+												MULTI MASTER KUBERNETES CLUSTER								
+												
+												
+				
+										
+		To create multi master cluster we need 3 masters(min) and wo worker nodes
+		
+		10.10.10.206	master1	
+		10.10.10.207    master2
+		10.10.10.208    master3
+	    10.10.10.209    workernode1
+	    10.10.10.210    workernode2
+		10.10.10.211    mastervip
+		
+		
+		Minimum requirements for setting up Highly K8s cluster
+
+				Install Kubeadm, kubelet and kubectl on all master and worker Nodes	
+				Network Connectivity among master and worker nodes
+				Internet Connectivity on all the nodes
+				Root credentials or sudo privileges user on all nodes
+				
+	Step 1) Set Hostname and add entries in /etc/hosts file			
+		10.10.10.206	master1	
+		10.10.10.207    master2
+		10.10.10.208    master3
+	    10.10.10.209    workernode1
+	    10.10.10.210    workernode2
+		10.10.10.211    mastervip
+				
+				
+	we have used one additional entry “10.10.10.211   mastervip” in host file because we will be using this IP and hostname while 
+	configuring the haproxy and keepalived on all master nodes.
+	This IP will be used as kube-apiserver load balancer ip. All the kube-apiserver request will come to this IP and then the request
+	will be distributed among backend actual kube-apiservers.
+	
+	
+	Step 2) Install and Configure Keepalive and HAProxy on all master / control plane nodes
+	
+		sudo yum install haproxy keepalived -y        or 		apt-get install haproxy keepalived -y
+		
+		Create a file as check_apiserver.sh in the path /etc/keepalived/check_apiserver.sh and the content shown below:
+		
+		#!/bin/sh
+APISERVER_VIP=192.168.1.45
+APISERVER_DEST_PORT=6443
+
+errorExit() {
+    echo "*** $*" 1>&2
+    exit 1
+}
+
+curl --silent --max-time 2 --insecure https://localhost:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET https://localhost:${APISERVER_DEST_PORT}/"
+if ip addr | grep -q ${APISERVER_VIP}; then
+    curl --silent --max-time 2 --insecure https://${APISERVER_VIP}:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET https://${APISERVER_VIP}:${APISERVER_DEST_PORT}/"
+fi
+
+
+
+	Set the executable permissions
+
+		sudo chmod +x /etc/keepalived/check_apiserver.sh
+		
+	create the file keepalived.conf in path /etc/keepalived/keepalived.conf and add the content
+		! /etc/keepalived/keepalived.conf
+! Configuration File for keepalived
+global_defs {
+    router_id LVS_DEVEL
+}
+vrrp_script check_apiserver {
+  script "/etc/keepalived/check_apiserver.sh"
+  interval 3
+  weight -2
+  fall 10
+  rise 2
+}
+
+vrrp_instance VI_1 {
+    state MASTER
+    interface enp0s3
+    virtual_router_id 151
+    priority 255
+    authentication {
+        auth_type PASS
+        auth_pass P@##D321!
+    }
+    virtual_ipaddress {
+        10.10.10.211/24
+    }
+    track_script {
+        check_apiserver
+    }
+}
+
+
+	backup the file keepalived.conf
+		sudo cp /etc/keepalived/keepalived.conf /etc/keepalived/keepalived.conf-org
+		
+				 sudo sh -c '> /etc/keepalived/keepalived.conf'
+				 
+	Note: Only two parameters of this file need to be changed for master-2 & 3 nodes. 
+	State will become SLAVE for master 2 and 3, priority will be 254 and 253 respectively.
+	
+	
+	Configure HAProxy on k8s-master-1 node, edit its configuration file and add the following contents:
+
+				sudo cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg-org
+				
+				
+				 vi /etc/haproxy/haproxy.cfg
+#---------------------------------------------------------------------
+# apiserver frontend which proxys to the masters
+#---------------------------------------------------------------------
+frontend apiserver
+    bind *:8443
+    mode tcp
+    option tcplog
+    default_backend apiserver
+#---------------------------------------------------------------------
+# round robin balancing for apiserver
+#---------------------------------------------------------------------
+backend apiserver
+    option httpchk GET /healthz
+    http-check expect status 200
+    mode tcp
+    option ssl-hello-chk
+    balance     roundrobin
+        server k8s-master-1 10.10.10.206:6443 check
+        server k8s-master-2 10.10.10.207:6443 check
+        server k8s-master-3 10.10.10.208:6443 check
+		
+	Now copy theses three files (check_apiserver.sh , keepalived.conf and haproxy.cfg) from master-1 to master-2 & 3 using scp command
+	
+	for f in k8s-master-2 k8s-master-3; do scp /etc/keepalived/check_apiserver.sh /etc/keepalived/keepalived.conf root@$f:/etc/keepalived; scp /etc/haproxy/haproxy.cfg root@$f:/etc/haproxy; done
+	
+	In case firewall is running on master nodes then add the following firewall rules on all three master nodes
+
+				sudo firewall-cmd --add-rich-rule='rule protocol value="vrrp" accept' --permanent
+				sudo firewall-cmd --permanent --add-port=8443/tcp
+				sudo firewall-cmd --reload
+				
+	Now Finally start and enable keepalived and haproxy service on all three master nodes using the following commands :
+
+				sudo systemctl enable keepalived --now
+				sudo systemctl enable haproxy --now
+				
+	Step 3) Disable Swap, set SELinux as permissive and firewall rules for Master and worker nodes
+	
+	Disable Swap Space on all the nodes including worker nodes, Run the following commands
+
+				sudo swapoff -a 
+				sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+	Set SELinux as Permissive on all master and worker nodes, run the following commands,
+
+				sudo setenforce 0
+				sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+	Modify ip tables
+			vi /etc/ufw/sysctl.conf
+			net/bridge/bridge-nf-call-ip6tables = 1 
+			net/bridge/bridge-nf-call-iptables = 1 
+			net/bridge/bridge-nf-call-arptables = 1
+				
+				
+	Run the following firewall-cmd command on all the master nodes,
+
+				sudo firewall-cmd --permanent --add-port=2379-2380/tcp
+				sudo firewall-cmd --permanent --add-port=10250/tcp
+				sudo firewall-cmd --permanent --add-port=10251/tcp
+				sudo firewall-cmd --permanent --add-port=10252/tcp
+				sudo firewall-cmd --permanent --add-port=179/tcp
+				sudo firewall-cmd --permanent --add-port=4789/udp
+				sudo firewall-cmd --reload
+				sudo modprobe br_netfilter
+				sudo sh -c "echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables"
+				sudo sh -c "echo '1' > /proc/sys/net/ipv4/ip_forward"
+		
+	Run the following commands on all the worker nodes,
+
+				sudo firewall-cmd --permanent --add-port=10250/tcp
+				sudo firewall-cmd --permanent --add-port=30000-32767/tcp                                                   
+				sudo firewall-cmd --permanent --add-port=179/tcp
+				sudo firewall-cmd --permanent --add-port=4789/udp
+				sudo firewall-cmd --reload
+				sudo modprobe br_netfilter
+				sudo sh -c "echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables"
+				sudo sh -c "echo '1' > /proc/sys/net/ipv4/ip_forward"
+				sudo sh -c "echo '1' > /proc/sys/net/ipv4/ip_forward"
+				
+	Install ebtables:
+				apt install -y ebtables ethtool
+				
+	Install kubeadm packages:
+				apt update && apt install -y apt-transport-https curl
+				curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+				sudo apt-get install curl
+				sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+				apt update
+				apt install -y kubelet kubeadm kubectl docker.io
+				kubeadm init --pod-network-cidr=192.168.0.0/16
+				
+				
+				netstat-ptlan | grep 6443 : to check the running services on port 6443
+				ps -ef | grep 6443
+				
+				
+				You can now join any number of the control-plane node running the following command on each as root:
+
+  kubeadm join 10.10.10.206:6443 --token nqu6h8.yeduid6hl53ywtgb \
+        --discovery-token-ca-cert-hash sha256:c9919a90bbc393d0673f18b89719f832730e6532c90f2aa06a1f0bb7b456f033 \
+        --control-plane --certificate-key b11c18278aee2e78e0605713ea72fb39e29f84c81a05b723a0d764c5f7fabddb
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 10.10.10.206:6443 --token nqu6h8.yeduid6hl53ywtgb \
+        --discovery-token-ca-cert-hash sha256:c9919a90bbc393d0673f18b89719f832730e6532c90f2aa06a1f0bb7b456f033
+		
+	master3
+	kubeadm join 10.10.10.208:6443 --token ekzg59.ibw5if67mnjmd5bu \
+        --discovery-token-ca-cert-hash sha256:68bb589adef40085940589c290c9f9d6c6df94aa2a5260c308f4bef9c2c05263
+
+
+
+
+
+				kubectl apply -f https://docs.projectcalico.org/v3.14/manifests/calico.yaml

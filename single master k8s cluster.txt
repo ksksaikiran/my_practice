@@ -1,0 +1,111 @@
+	
+								
+								
+														Kubernetes cluster creation
+
+
+	In order to create the kubernetes cluster, we have follow some of the prequesties to create a k’8s cluster.
+	prerequisties: 
+	for master: 
+		2GB RAM (min.)
+		2 Cores CPU(min.)
+	for slave: 
+		1GB RAM(min.)
+		1 Core CPU (min.)
+
+Installation steps:
+	At master and node (Do the same process for both master and node only network differs master and node )		
+		The Installation process will be same for both master and slave 
+				
+			- Update the repository
+			- Turn off swap space
+			- Update Hostname, Hosts & Set Static IP
+			- Install Open SSH server and Docker
+			- Install kubeadm, kubectl and kubelet
+	After this process, on master and node , go to the master and 
+
+				Initiate Kubernetes Cluster 
+	`			install the pod network
+				setup the kubernetes dashboard
+commands:
+		
+Update the repo,
+		sudo yum update or apt-get update
+
+Turnoff the swap space,
+		swapoff -a	
+Go the fstab file in path /etc/fstab and disbale the UUID,
+
+# UUID=26620198-186a-404b-b9a1-12d957d7c826     /           xfs    defaults,noatime  1   1
+	- check the swap memory is disabled or not with,
+		free -h
+ edit the hostname in path /etc/hostname and add the master name,
+			sudo /etc/hostname 
+			
+ edit the hosts file and add the ip of the master and nodes and hostnames and viceversa
+			sudo /etc/hosts,  mention as below: 
+	127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+	::1         localhost6 localhost6.localdomain6
+	172.31.32.11         k8master
+	172.31.13.123       node1
+	172.31.5.72           node2
+
+
+
+
+create the kubernetes repo in path /etc/yum.repos.d/kubernetes.repo to get the kubernetes packages from the repo and add  the following lines in that file,
+		
+[kubernetes]
+name=Kubernetes baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64 
+enabled=1
+gpgcheck=1 
+repo_gpgcheck=1 
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg 
+		https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+		
+Upgrade the ip tables in the file, /etc/sysctl.conf
+
+		net.bridge.bridge-nf-call-ip6tables = 1 
+		net.bridge.bridge-nf-call-iptables = 1
+	check with command, 
+			sysctl -p
+Install the kubeadm, kubectl, kubelet and docker the master and even in the node machine,
+		yum install -y kubeadm kubelet kubectl docker
+Start and enable the kubelet service and docker (docker daemon)service,
+		for i in docker kubelet 
+		> do 				
+		> systemctl start $i		(or) 		 systemctl start kubelet docker
+		> systemctl enable $i				 systemctl enable kubelet docker
+		> done 
+	
+Initialize the cluster in the master,
+kubeadm init –pod-network-cidr=172.30.0.0/16
+
+To start using your cluster, you need to run the following as a regular user:
+  mkdir -p $HOME/.kube
+  	  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+              sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+  	export KUBECONFIG=/etc/kubernetes/admin.conf
+A Pod Network allows nodes within the cluster to communicate. 
+There are several available Kubernetes networking options. Use the following command to install the flannel pod network add-on:
+
+sudo kubectl apply
+-f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+Check the status of the nodes,
+sudo kubectl get nodes
+Once a pod network has been installed, you can confirm that it is working by checking that the CoreDNS pod is running by typing:
+sudo kubectl get pods –all-namespaces
+
+
+
+
+Repeat the same installation process in the nodes and while initialisation of kubenetes in the master you’ll the statement like shown below,
+use the link and copy and paste in node machine to join into the cluster. 
+
+kubeadm join 172.31.32.11:6443 --token 0gtf3i.2yxe1httf05nw6mv \
+	--discovery-token-ca-cert-hash sha256:d2bd7748326f93c078e540258a1cde35f2b464b7261654f9b03e413a78135120kubeadm join 172.31.32.11:6443 --token 0gtf3i.2yxe1httf05nw6mv –discovery-token-ca-cert-hash sha256:d2bd7748326f93c078e540258a1cde35f2b464b7261654f9b03e413a78135120

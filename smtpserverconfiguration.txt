@@ -1,0 +1,35 @@
+ 
+ 
+ SMTP SERVER INSTALLATION
+ 
+ 10.10.10.254    
+ root Tt$d#v
+ 
+  apt install ssmtp
+  apt install mailutils
+
+  cd /etc/ssmtp/
+   
+  ls
+  cp ssmtp.conf ssmtp.conf.bkp 
+  ls
+  vi ssmtp.conf
+   
+root=postmaster
+mailhub=202.56.199.154:587
+RewriteDomain=hpfs.in
+Hostname=notification@hpfs.in
+FromLineOverride=YES
+UseTLS=YES
+UseSTARTTLS=YES
+AuthUser=notification@hpfs.in
+AuthPass=Ctel@123$
+
+TLS_CA_File=/opt/key.key
+	
+	copy the key.key file in /opt path 
+	cd /opt
+	ls    (verify that file is copies or not)
+    echo "TEST MAIL IN MAILX" |mail -s 'Test Mail' saikiran.k@ctel.in     (test that mail is sending or not)
+
+

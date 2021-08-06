@@ -1,0 +1,58 @@
+																			
+																				ANSIBLE
+																				
+																				
+Ansible is a configuration management tool and its dependency is python,
+
+Ansible installation:
+
+		sudo yum update 
+		sudo yum install python3
+		sudo pip3 install ansible
+		
+	step1:
+			Change the hostnames as per your convinence
+				
+				hostname <give a hostname>
+				vi /etc/hostname (edit the file and give same hostname)
+			Give the hostnames in the hosts file
+				vi /etc/hosts
+				10.0.1.48 ansible
+				10.0.1.151 node1
+				10.0.1.189 node2
+			edit  the sshd_config file, 
+				vi /etc/ssh/sshd_config
+				(uncomment the pubAuthkey, change publicAuthentication as no)
+			go to path /root/.ssh/ and then generate the ssh-key
+				
+				ssh-keygen
+				
+			copy the content of the file "id_rsa.pub" in all the server to interact without password between servers
+			
+		the content will be like this as shown:
+		
+		ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDFGwZ3nA9/RoGP2lSMlpsEHTg+n5x8QmvlAgwBiKuDUJU0eP/8DDK8ELxwt1deTt35IvmiBZKZbNh7rr
+		0WNb7RINSxyYX8yTFiJPWWMeOu0RFX85RiMtFbQ/vlIcV+m6rklvH7B5zqvhl/F+fELF6NI8C/S+AsSJ582g3BxUm6imAwKDXArpK3LLvtOkXijoA6x/Ep
+		ymP49QDvEy3GlVaI9xMnLEJnv+k6tqT1RcgsIGjlVi6M2k9csv0BYLS++hww0mmK23zuUCGAr1rl/dK2JbXAjcIzhdtSEozt0X9Smvqm/ms5JClgddc3h1
+		UatSqANkSEOs2dJ0qYS4UXwBZj root@ansible
+
+		ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCnAM7bt70+BTg2XmNXubaB0sH1KwEivj8+1I92XnOtlMaCg4/VwC+wBi+gobJYDkVOEsDEcu2mBFqad
+		7uSi9PAqKSQp4qQ2oCirk0IrdcbXAiX6wZRy6Qao2Ybb2TYC1Vx5jhw3NNXZQ07S5uwnD9pk18vcJVgcLaWPgxMjGEwbMvnKee/26eMvzCANCvT4qLQgOv
+		2YsO2B7yBr0imT7mNrQK+6UDSD4ZtkEqrigaV2acajxQBgNiK63gcrbMIYV/Plwru/ignVnI2yHd9CAMwIWaJpWLqSxQn91ugaJVvcqe7OCuj1SIURnpq+
+		GWTM1Fr5LhhocRJRKW+EMl5xU/ root@node1
+
+		ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDs5jSlOs79JiUsGocD0tjXfttUptYcrEhYv4n/mqsxH1VTlHwaIV3lnwR3CVEvEmMtzRKdFEtwcvhn6D
+		P+5s2TkeZdmasTh5IesmWs20mbE3DVACCb+IdJ2pgS3fnvBHFX6838+GoGNQ0IIyrpS5Le21N8hjYyjYzrYFyVLtDA7lspAG6WYhdsKYYVf6I2jMmw8rBr
+		60gd1XtqvLq99ESPJNNZn5za+fpJIzoWZqsCViM7zeQu5NNkxL0cm5ubDFBcAV6qOJPKKkcPkBklJakMw1PmTlliNSghm9KyxzpPn2phpe2Kc7UaZcZP4Y
+		JBLM3Es9tQADBPeDnG6RyMJWtn root@node2
+
+
+			Create inventory file in the path /etc/ansible/hosts
+					vi /etc/ansible/hosts       (add only hostnames of client machines)
+			
+			To check all are pinging or not,
+				
+				ansible all -m ping 
+			To create a user in the client systems from ansible
+				ansible all -m user -a "name=<username> password=<password>"
+				

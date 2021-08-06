@@ -1,0 +1,40 @@
+						             Jenkins
+
+	Jenkins Installation: 
+
+			Go to Browser >> search "Jenkins Download" and click on official site  >> select "OS types and versions " 
+			
+				sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+  				sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+
+				sudo yum install jenkins
+				systemctl start jenkins
+				systemctl enable jenkins
+	
+-------------------------------------------------------------------------------------------------------------------------------------
+
+	Log in with credentials:
+				/var/lib/jenkins/secrets/initialpassword 
+			copy the password and paste in the password tab.
+		
+
+	Jenkins jobs:
+			Go to Dashboard >> click on new item >> select the type of job.
+	Jenkins pipeline:
+			Go to Dashboard >> click on next item >> select pipeline job.
+	
+	Jenkins plugins: 
+			Role-based Authorization strategy - To manage the users and roles
+			deploy to containers   -  To deploy the code on servers
+			Artifact uploader      -   To upload the artifacts
+			pipeline 	       -  To create a jobs pipeline
+			s3 publisher	       -  To upload the artiacts and file into s3 bucket. 
+	
+	
+
+
+
+
+
+
+

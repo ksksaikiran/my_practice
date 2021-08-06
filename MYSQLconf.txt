@@ -1,0 +1,32 @@
+
+
+
+			MYSQL CONF ON UBUNTU
+			
+	sudo apt update												sudo apt update
+	sudo apt install mysql-server					or		 	sudo apt upgrade		
+	sudo mysql_secure_installation								wget -c https://repo.mysql.com//mysql-apt-config_0.8.13-1_all.deb
+	sudo systemctl status mysql									sudo dpkg -i mysql-apt-config_0.8.13-1_all.deb 
+	sudo systemctl enable mysql									sudo apt-get install mysql-server
+	sudo mysql -u root -p										sudo mysql_secure_installation
+																sudo systemctl status mysql
+	/var/log/mysql/error.log	(logs file)						sudo systemctl enable mysql
+	/var/lib/mysql				(data storage files)			sudo mysql -u root -p
+																
+	
+			MYSQL CONF ON CENTOS
+			
+	wget https://dev.mysql.com/get/mysql57-community-release-el7-9.noarch.rpm      to get rpm file
+	md5sum mysql57-community-release-el7-9.noarch.rpm       Verify
+	sudo rpm -ivh mysql57-community-release-el7-9.noarch.rpm     
+	sudo yum install mysql-server
+	sudo systemctl start mysqld
+	sudo systemctl status mysqld
+	sudo grep 'temporary password' /var/log/mysqld.log
+	sudo mysql_secure_installation
+	mysqladmin -u root -p version
+	
+	
+
+
+	

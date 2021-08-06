@@ -1,0 +1,12 @@
+netstat -ptln :  To see the stats and listening ports of the server
+curl <localhost:5000> : To see the content of the page
+
+
+
+docker run -d \
+  -e REGISTRY_HTTP_ADDR=10.10.10.205:5000 \
+  -p 5000:5000 \
+  --name registry \
+  registry:2
+
+ ssh-copy-id 10.10.10.206  to make passwordless authentication

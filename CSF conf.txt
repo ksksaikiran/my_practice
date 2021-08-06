@@ -1,0 +1,89 @@
+
+
+
+												CSF(CONFIG SERVER FIREWALL) 
+												
+												
+			ConfigServer Firewall, also known as CSF, is a firewall configuration script created to provide better security for your server while giving you an advanced, 
+		easy to use interface for managing firewall settings. CSF configures your server’s firewall to lock down public access to services and only allow certain connections, 
+		such as logging in to FTP, checking email, or loading websites.
+			With CSF we can block and allow and ip's,ip-ranges, ports,annymous requests from anywhere,
+												
+		First disable and stop the ufw (in ubuntu), firewalld(in redhat)
+		
+		systemctl disable ufw
+		systemctl stop ufw
+		
+		cd /usr/src
+		
+		Download the csf file,
+		
+		wget http://download.configserver.com/csf.tgz
+		Extract the file,
+		tar -xzf csf.tgz
+		Disable the ufw, 
+		ufw disable
+		Go to the file where tar file is extracted and enter into it,then cd csf
+		sh install.sh
+		check the required iptablemodules installed or not 
+		perl /usr/local/csf/bin/csftest.pl
+		Then edit the file and make changes,
+		vi /etc/csf/csf.conf
+		 
+		 TESTING="0"
+		 RESTRICT_SYSLOG = "3"
+		
+		After editing conf file reload the csf by using command below,
+		csf -r
+		Restart and verify the status of csf and lfd 
+		systemctl start csf
+		systemctl status csf
+		systemctl start lfd
+		systemctl status lfd
+		Reload,
+		csf -r
+		
+		/etc/csf/csf.allow    This file allows the ip's and ip-ranges(10.10.0.0/16) that are mentioned in it and restrict the others.
+		/etc/csf/csf.deny     This file blocks the ip's and ip ranges that are mentioned in it.So we can restrict any ip and ip-ranges from anywhere.
+		/etc/csf/csf.conf     This file is used to enable/disable the testing the ip's and allow/block the ports, also used for web UI configuration and various things.
+		
+		For WEB UI
+		apt-get install libio-socket-ssl-perl libnet-libidn-perl libio-socket-inet6-perl libsocket6-perl libcrypt-ssleay-perl -y
+		vi /etc/csf/csf.conf
+		make the changes in the file for following details
+			RESTRICT_UI = "1"
+			UI = "1"
+			UI_PORT = "8080"
+			UI_IP = ""
+			UI_USER = "admin"
+			UI_PASS = "admin@123456
+			# For security reasons, you should always keep this option low (i.e 0-10)
+			UI_RETRY = "5"
+			#This option will add the connecting IP address to the file /etc/csf/ui/ui.ban after UI_RETRY login failures.
+		
+		Edit the file ui.allow file to allow the ipaddress for web UI 
+		/etc/csf/ui/ui.allow
+		insert the ip that you want to allow
+		After editing Restart the services,
+		service lfd restart
+		service lfd status
+		
+		Install the zip and unzip file,libwww-perl
+		apt install zip unzip -y
+		apt install libwww-perl
+		csf -r
+		echo '!/bin/sh' > /usr/sbin/sendmail
+		chmod +x /usr/sbin/sendmail
+
+		
+		https://<ip-address>:8080
+		
+		csf -a <ipaddress> To add to file /etc/csf/csf.allow
+		csf -ar <ipaddress> To remove from file /etc/csf/csf.allow
+		csf -d <ipaddress> To add the ip into deny file /etc/csf/csf.deny
+		csf -dr <ipaddress> To remove the ip from deny file /etc/csf/csf.deny
+		csf -x To disable csf
+		csf -e To enable csf
+		csf -s To start csf
+		csf -r To reload csf
+		

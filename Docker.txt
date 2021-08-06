@@ -1,0 +1,323 @@
+					
+												Docker
+												
+												
+	Links:  https://docs.docker.com/engine/reference/commandline/attach/
+		    https://docs.docker.com/network/
+			https://docs.docker.com/storage/
+												
+=====================================================================================================
+Installation:
+
+	- yum update
+	- yum install docker
+	- systemctl start docker
+	- systemctl enable docker
+
+Docker commands: 
+
+	- docker  --version
+	- docker  images
+	- docker ps
+	- docker ps -a
+	- docker stop <container id>
+	- docker start <conatiner id>
+	- docker rmi <image id>
+	- docker rm <container id>
+	- docker logs
+	- docker run -itd <image name or id> (-d option for detached mode)
+	- docker logs
+	- docker exec -it <container id> /bin/bash  (To enter into the container)
+	- docker exec -it <container id > <commands to run> (to run the command without entering into container)
+	 
+
+
+=======================================================================================================
+
+
+Docker Networking:
+=======================================================================================================
+	- docker network ls
+	- docker network create -d bridge mynet1
+	- docker network create -d bridge --subnet=172.18.0.0/16 --ip-range=172.18.5.0/24 --gateway=172.18.0.254 net1
+	- docker network create –driver=bridge  --subnet= <subnet ip> --ip-range=<ip’s range>   --gateway=<gateway ip> (network name)
+	- docker network inspect <network name>
+
+(In default bridge network we cannot ping the another container in it with hostname, but in custom created bridge network we can ping the containers with hostnames also )
+
+	- docker network connect <network name> <container id> 				(To connect one network containers to another network containers)
+	-  docker network connect net2 cent2
+	- docker inspect <container id  or image id>						(To see full details of you want)
+
+=========================================================================================================
+Docker volumes:
+==========================================================================================================
+	- docker volume ls
+	- docker volume create <volume name>
+	- docker volume prune 
+	- docker run -itd –name <cont. Name> --network <network name> -v <volume name> <image name>
+	
+To mount the volume for the container,
+
+ docker run -d \
+  --name devtest \
+  --mount source=myvol2,target=/app \
+  nginx:latest
+
+  
+To attach the bind volume to the container while starting,
+
+docker run -d \
+  -it \
+  --name devtest \
+  --mount type=bind,source="$(pwd)"/target,target=/app \
+  nginx:latest
+
+
+To use the docker volumes in Docker-compose,
+
+	version: "3.9"
+services:
+  frontend:
+    image: node:lts
+    volumes:
+      - myapp:/home/node/app
+volumes:
+  myapp:
+    external: true
+	
+	
+	or 
+	
+To attach the volume to the container while starting the container
+
+	docker run -d \
+  --name=nginxtest \
+  -v nginx-vol:/usr/share/nginx/html \
+  nginx:latest
+	
+
+When you start a service and define a volume, each service container uses its own local volume. 
+None of the containers can share this data if you use the local volume driver, but some volume drivers do support shared storage. 
+Docker for AWS and Docker for Azure both support persistent storage using the Cloudstor plugin.
+
+The following example starts a nginx service with four replicas, each of which uses a local volume called myvol2.
+
+$ docker service create -d \
+  --replicas=4 \
+  --name devtest-service \
+  --mount source=myvol2,target=/app \
+  nginx:latest
+
+Use the command in order to see the services running
+	docker service ps devtest-service
+	
+This example assumes that you have two nodes, the first of which is a Docker host and can connect to the second using SSH.
+
+On the Docker host, install the vieux/sshfs plugin:
+
+	docker plugin install --grant-all-permissions vieux/sshfs
+
+Create a volume using a volume driver
+This example specifies a SSH password, but if the two hosts have shared keys configured, you can omit the password. 
+Each volume driver may have zero or more configurable options, each of which is specified using an -o flag.
+
+$ docker volume create --driver vieux/sshfs \
+  -o sshcmd=test@node2:/home/test \
+  -o password=testpassword \
+  sshvolume
+	
+	docker container stop nginxtest
+
+	docker container rm nginxtest
+
+	docker volume rm nginx-vol
+
+=======================================================================================================
+
+Docker Compose:
+=======================================================================================================
+	Installation: 
+	
+	- To download the current version of the docker:
+
+	sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+	- Apply executable permissions to the binary:
+	sudo chmod +x /usr/local/bin/docker-compose
+	- Test the installation 
+	docker-compose –version
+	- Create a File and write the code
+	- Create the Dockerfile 
+	- Create the docker-compose.yml file
+	- docker-compose up (run from the file location only)
+	
+Dockerfile is used for single container only, so inoder to create multiple containers we use docker compose.let us see example for docker-compose file
+Version: ‘3’
+services: 
+	web: 
+		image: httpd
+		ports:
+		- “80:80”
+		image: phpmyadmin
+		ports:
+		- “90:80”
+	db:
+		image: mysql
+		ports:
+		- “3306:3306”
+	environment:
+	- MYSQL_ROOT_PASSWORD= <password for admin>
+	- MYSQL_USER=<username>
+	- MYSQL_PASSWORD=<password for user>
+	-MYSQL_DATABASE=Demo1(any name)
+
+	docker-compose up -d : To run the docker compose in detached mode 
+	docker-compose ps: To see the running docker compose containers 
+	docker-compose down: To down the docker compose containers.
+
+=============================================================================================
+Docker practice;
+	- create a docker file Dockerfile
+	- Write the content in the file    
+	FROM centos
+	RUN yum install httpd -y 
+	COPY index.html   /var/www/html
+	CMD [“/usr/sbin/httpd”, “-D”, “FOREGROUND”]
+	EXPOSE 80
+	
+The systemctl command should not be used to start the httpd service, so for that we CMD as shown above. 
+	
+	- docker exec -it <container id> curl localhost
+
+===============================================================================================
+
+Creating the docker local UI Registry:
+===============================================================================================
+Update repo package and add the docker repo, install the docker: 
+
+	yum install -y yum-utils
+	yum-config-manager --add-repo 	https://download.docker.com/linux/centos/docker-ce.repo
+	yum install -y docker-ce docker-ce-cli containerd.io
+	systemctl start docker
+Install the docker-compose,
+
+	curl -L "https://github.com/docker/compose/releases/download/1.27.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+Add the executable permissions to the docker-compose file,
+
+	chmod +x /usr/local/bin/docker-compose
+
+Create a soft link to the files,
+	ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+
+Download the Hello-world image or any image and 
+	docker run hello-world
+	docker-compose --version
+Create a Docker registry,
+	mkdir docker_registry
+	cd docker_registry
+pull the registry image,
+	docker pull registry:2
+Create a dirrctory to store the images,
+	mkdir /tmp/docker_registry
+launch a registry with the port no. 5000/TCP,
+	docker run -d -p 5000:5000 --name docker_registry -v /tmp/docker_registry:/var/lib/registry registry:2
+Display the logs of the container,
+	docker logs docker_registry
+Lauch the docker image for UI,
+	docker run -d \
+  -p 8086:80 \
+  --name=docker_registry_ui \
+  -e REGISTRY_HOST=0.0.0.0 \
+  -e REGISTRY_PORT=443 \
+  -e REGISTRY_PROTOCOL=https \
+  -e SSL_VERIFY=false \
+  -e USERNAME=kiran \
+  -e PASSWORD=saikiran \
+  -e ALLOW_REGISTRY_LOGIN=true \
+  -e REGISTRY_ALLOW_DELETE=true \
+  parabuzzle/craneoperator:latest
+
+Display the logs of the container_UI
+	docker logs docker_registry_ui
+Verify the web server locally working or not:
+	curl http://0.0.0.0:8086
+	
+ we also create the local docker repository using docker-compose also, by creating docker-compose.yml 
+ 
+version: '3'
+services:
+    docker-registry:
+        image: registry:2
+        volumes:
+        - "/tmp/docker_registry:/var/lib/registry"
+        ports:
+        - "5000:5000"
+        restart: always
+    docker-registry-ui:
+        image: parabuzzle/craneoperator:latest
+        ports:
+        - "8086:80"
+        environment:
+        - REGISTRY_HOST=docker-registry
+        - REGISTRY_PORT=5000
+        - REGISTRY_PROTOCOL=http
+        - SSL_VERIFY=false
+        - USERNAME=admin
+        - PASSWORD=mypassword
+        restart: always
+        depends_on:
+        - docker-registry
+
+after writing this file,execute the file with docker-compose, 
+	docker-compose up -d 
+	
+Verify the server working locally with port,
+		curl http://0.0.0.0/8086
+		
+Test the registry, pull any one of the image from docker hub
+	docker pull ubuntu
+Tag the pulled image,
+	docker tag alpine <ipaddress>:5000/alpine
+Push the image to repository,
+	docker push <ip address>:5000/alpine
+	
+	
+In a Web browser on the desktop, login on the Docker Registry UI by visiting the webpage http://<ip-address>:8086/. We have to authenticate with the credentials.
+
+============================================================================================================================
+Docker local cli registryvon centos
+============================================================================================================================
+docker pull registry
+docker history registry
+docker run -dit -p 5000:5000 --name registry registry
+docker ps
+firewall-cmd --permanent --add-port=80/tcp
+firewall-cmd --reload
+docker tag ubuntu:16.04 <ip or hostname of your server>:5000/ubuntu:16.04
+Edit the file “/usr/lib/systemd/system/docker.service” and change the parameter
+
+ExecStart=/usr/bin/dockerd
+
+to
+
+ExecStart=/usr/bin/dockerd –insecure-registry docker-repo.example.com:5000
+
+systemctl daemon-reload
+systemctl restart docker
+docker push docker-repo.example.com:5000/ubuntu:16.04
+
+Login  to ‘another ’ server 
+Edit the file “/usr/lib/systemd/system/docker.service” and change the parameter
+
+ExecStart=/usr/bin/dockerd
+
+to
+
+ExecStart=/usr/bin/dockerd –insecure-registry docker-repo.example.com:5000
+
+systemctl daemon-reload 
+systemctl restart docker
+docker pull docker-repo.example.com:5000/ubuntu:16.04
+docker images
