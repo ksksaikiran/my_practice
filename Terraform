@@ -1,0 +1,19 @@
+Terraform is an infrastructure as code (IaC) tool that allows you to build, change, and version infrastructure safely and efficiently.
+Terraform is used for provisioning of the Infrastructure.
+
+
+Terraform Understatnding:
+Terraform file is saved as .tf extension
+syntax:
+       <block> <parameters> {
+           key1 = value1
+           key2 = value2
+        }
+        
+  simple local.tf file
+  
+ 
+  resource "local_file" "pet"{               //resource --> blockname    //"local_file" -->Resource type ==> local is the provider, file is resouce   //"pet" --> resource name
+     filename = "/home/user/pets.txt"         // filename and content are the arguments
+     content = "we love pets"
+     }
