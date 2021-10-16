@@ -3,7 +3,7 @@
 												MULTI MASTER KUBERNETES CLUSTER								
 												
 												
-				
+				https://blog.neuvector.com/article/advanced-kubernetes-networking
 										
 		To create multi master cluster we need 3 masters(min) and wo worker nodes
 		

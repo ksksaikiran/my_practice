@@ -1,0 +1,36 @@
+
+		GITLAB INSTALLATION
+		
+Prerequesties:
+1. Install and setup smtp and postfix 
+2. Set the hostname as github.ctel.com
+
+
+sudo apt update
+sudo apt upgrade -y
+sudo apt install -y ca-certificates curl openssh-server
+curl -sS https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | sudo bash
+cat /etc/apt/sources.list.d/gitlab_gitlab-ce.list 
+sudo apt update
+sudo apt -y install gitlab-ce
+sudo vim /etc/gitlab/gitlab.rb
+
+external_url "https://gitlab.ctel.com"
+
+# Enable the Let's encrypt SSL
+letsencrypt['enable'] = true
+
+# This is optional to get SSL related alerts
+letsencrypt['contact_emails'] = ['email@your-domain.com']
+
+# This example renews every 7th day at 12:30
+letsencrypt['auto_renew_hour'] = "12"
+letsencrypt['auto_renew_minute'] = "30"
+letsencrypt['auto_renew_day_of_month'] = "*/7"
+
+
+sudo gitlab-ctl reconfigure
+sudo gitlab-ctl restart
+sudo gitlab-ctl status
+
+http://gitlab.ctel.com       or 	http:<IPaddress>/gitlab

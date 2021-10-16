@@ -1,0 +1,848 @@
+https://medium.com/airy-science/making-istio-work-with-kubernetes-statefulset-and-headless-services-d5725c8efcc9
+https://medium.com/avmconsulting-blog/persistent-volumes-pv-and-claims-pvc-in-kubernetes-bd76923a61f6
+https://medium.com/swlh/kubernetes-storage-explained-558e85596d0c
+
+========================================================
+					CONFIGMAPS
+========================================================
+
+ kubectl create configmap myconfig1 --dry-run=client -o yaml > avengers.yaml
+ vim avengers.yaml
+ kubectl apply -f avengers.yaml
+ kubectl describe configmaps myconfig1
+ kubectl run avengers --image=nginx --dry-run=client -o yaml > avenge.yaml
+ vim avenge.yaml
+ kubectl apply -f avenge.yaml
+ kubectl get pods
+ 
+
+----------------------------------------------
+kubectl create configmap myconfig1 --dry-run=client -o yaml > avengers.yaml
+ vim avengers.yaml
+ 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: myconfig1
+data:
+  vision: "wanda"
+  sai: "Kiran"
+ kubectl apply -f avengers.yaml
+ 
+ kubectl run avengers --image=nginx --dry-run=client -o yaml > avenge.yaml
+ vim avenge.yaml
+ 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: avengers
+spec:
+  containers:
+  - image: nginx
+    name: avengers
+    envFrom:
+    - configMapRef:
+        name: myconfig1
+
+
+ kubectl apply -f avenge.yaml
+ kubectl get pods
+ kubectl exec avengers -- env | grep -i sai
+
+------------------------------------
+ kubectl create cm myconfig2 --dry-run=client -o yaml > avengers2.yaml
+ vim avengers2.yaml
+ 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myconfig2
+data:
+  myname: "Saikiran"
+  myarea: "Hayathnagar"
+
+ kubectl apply -f avengers2.yaml
+
+ kubectl run mycont --image=naginx:1.8 --dry-run=client -o yaml > avenge2.yaml
+ vim avenge2.yaml
+ 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mycont
+spec:
+  containers:
+  - image: nginx:1.8
+    name: mycontainer
+    envFrom:
+    - configMapRef:
+      name: myconfig2
+
+ kubectl apply -f avenge2.yaml
+ kubectl get pods
+ kubectl get pods -o wide
+  kubectl exec mycont -- env | grep -i myarea
+ kubectl exec mycont -- env | grep -i myname
+-----------------------------------------------
+
+ vim Conf.yaml
+ 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: conf-testing
+data:
+  organisation: "ctel"
+  Area: "Madhapur"
+
+kubectl apply -f testing.yaml
+
+vim testing.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: testing-conf
+spec:
+  containers:
+  - name: test-cont
+    image: nginx:1.8
+    ports:
+    - containerPort: 80
+    envFrom:
+    - configMapRef:
+        name: conf-testing
+		
+kubectl apply -f testing.yaml
+ kubectl get pods
+ kubectl get pods -o wide
+  kubectl exec testing-conf -- env | grep -i organisation
+ kubectl exec testing-conf -- env | grep -i Area
+ 
+ -----------------------------------------------------------
+ vim mongomap.yaml
+ kubectl apply -f mongomap.yaml
+ 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-map
+data:
+  database: mongodb
+  database_uri: mongodb://localhost:27017
+  MONGO_INITDB_ROOT_USERNAME: root
+  MONGO_INITDB_ROOT_PASSWORD: Ctel@123
+
+vim mongomappod.yaml
+kubectl apply -f mongomappod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:  
+  name: mongomappod
+spec:
+  containers:
+  - image: mongo
+    name: mongopod
+    ports:
+    - containerPort: 27017
+    envFrom:
+    - configMapRef:
+        name: mongo-map
+
+kubectl get pods
+kubectl exec -it <po name> sh
+#mongo   or # mongo -u root -p
+> show dbs;
+
+----------------------------------------------------------------
+
+echo -n "root" | base64
+  cm9vdA==
+echo -n "Ctel@123" | base64
+  Q3RlbEAxMjM=
+
+vim secret.yaml
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-1
+data:
+  username: cm9vdA==
+  password: Q3RlbEAxMjM=
+type: opaque
+
+kubectl apply -f secret.yaml
+
+vim sec-pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sec-pod-test
+spec:
+  containers:
+  - name: podimage
+    image: nginx:1.8
+    env:
+    - name: USERNAME
+      valueFrom:
+        secretKeyRef:
+          key: username
+          name: secret-1
+    - name: PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: secret-1
+
+kubectl apply -f sec-pod.yaml
+
+ kubectl get pods
+ kubectl exec sec-pod-test -- env | grep -i username
+ kubectl exec sec-pod-test -- env | grep -i password
+
+============================================================================	
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-pod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-pod
+  template:
+    metadata:
+      labels:
+        app: mysql-pod
+    spec:
+      containers:
+      - name: mysql-pod
+        image: mysql
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: Password
+
+ #envFrom:
+     #  - secretKeyRef:
+     #      name: mysql-sec
+     #  - configMapRef:
+     #      name: mysql-conf
+     #   env:
+     #   - name: MYSQL_USERNAME
+     #     valueFrom:
+     #       secretKeyRef:
+     #         key: username
+     #         name: mysql-sec
+     #   - name: MYSQL_PASSWORD
+     #     valueFrom:
+     #       secretKeyRef:
+     #         key: password
+     #         name: mysql-sec
+     #   - name: DB_URL
+     #     valueFrom:
+     #       configMapKeyRef:
+     #         key: database_uri
+     #         name: mysql-conf
+     #   - name: DB_DATABASE
+     #     valueFrom:
+     #       configMapKeyRef:
+     #         key: database
+     #         name: mysql-conf
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-serv
+spec:
+  selector:
+      app: mysql-pod
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3306
+    targetPort: 3306
+
+
+============================================================================
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sec-pod
+spec:
+  containers:
+  - name: sec-pod
+    image: mysql
+  #  ports:
+  #  - containerPort: 3306
+    env:
+    - name: USERNAME
+      valueFrom:
+        secretKeyRef:
+          key: USERNAME
+          name: sec-conf
+    - name: MYSQL_ROOT_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: MYSQL_ROOT_PASSWORD
+          name: sec-conf
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sec-conf
+data:
+  USERNAME: dXNlcm5hbWU=
+  MYSQL_ROOT_PASSWORD: cGFzc3dvcmQ=
+
+======================================================
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sec-conf
+data:
+  USERNAME: dXNlcm5hbWU=
+  MYSQL_ROOT_PASSWORD: cGFzc3dvcmQ=
+  MYSQL_USER: c2Fpa2lyYW4=
+  MYSQL_PASSWORD: Q3RlbEAxMjM=
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-conf
+data:
+  MYSQL_DATABASE: saikiran
+  
+  apiVersion: v1
+kind: Pod
+metadata:
+  name: sec-pod
+spec:
+  containers:
+  - name: sec-pod
+    image: mysql
+  #  ports:
+  #  - containerPort: 3306
+    env:
+    - name: USERNAME
+      valueFrom:
+        secretKeyRef:
+          key: USERNAME
+          name: sec-conf
+    - name: MYSQL_ROOT_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: MYSQL_ROOT_PASSWORD
+          name: sec-conf
+	- name: USER
+      valueFrom:
+        secretKeyRef:
+          key: USER
+          name: sec-conf
+    - name: MYSQL_ROOT_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: MYSQL_PASSWORD
+          name: sec-conf
+    - name: MYSQL_DATABASE
+      valueFrom:
+        configMapKeyRef:
+          key: MYSQL_DATABASE
+          name: my-conf
+		  
+	
+========================================================================
+KUBERNETES VOLUMES
+========================================================================
+
+https://ngugijoan.medium.com/persistent-volume-and-persistent-volume-claims-kubernetes-8ded0eb1cd6a
+https://medium.com/analytics-vidhya/volumes-in-kubernetes-fa9f50ce4c8f#:~:text=In%20Kubernetes%2C%20a%20volume%20can%20be%20thought%20of%20as%20a,is%20created%20and%20its%20content.
+
+EMPTYDIR (emptyDir): It is a type of volume that is created when a Pod is first assigned to a Node. It remains active as long as the Pod is running on that node. 
+The volume is initially empty and the containers in the pod can read and write the files in the emptyDir volume. 
+Once the Pod is removed from the node, the data in the emptyDir is erased.
+emptyDir is a temporary directory and when the pod is destroyed, it will destroy the shared volume and all its contents.
+
+vim empdir.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: emp-pod
+spec:
+  containers:
+  - name: empdir-pod
+    image: redis
+    volumeMounts:
+    - name: redis-storage
+      mountPath: /data/redis
+  volumes:
+  - name: redis-storage
+    emptyDir: {}
+
+kubectl apply -f empdir.yaml
+kubectl get pods
+kubectl exec -it emp-pod -- /bin/bash
+
+
+vim emp2Dir.yaml
+kubectl apply -f emp2-pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: emp2-pod
+  labels:
+    app: poddy
+spec:
+  containers:
+  - name: emptypod
+    image: nginx:1.8
+    volumeMounts:
+    - name: nginx-volume
+      mountPath: /data/nginx
+  volumes:
+  - name: nginx-volume
+    emptyDir: {}
+
+
+-----------------------------------------------
+HOSTPATH(hostPath): This type of volume mounts a file or directory from the host node’s filesystem into your pod.
+
+
+
+NFS:
+--- 
+apiVersion: v1
+kind: PersistentVolume
+metadata: 
+  name: nfs
+spec: 
+  accessModes: 
+    - ReadWriteMany
+  capacity: 
+    storage: 1Mi
+  nfs: 
+    path: /
+    server: nfs-server.mydomain.com
+  storageClassName: nfs
+  
+ apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: myapp-mongo-pv
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: myapp-sc
+  # persistentVolumeReclaimPolicy: Retain  # StorageClass has a reclaim policy default so it'll be "inherited" by the PV
+  mountOptions:
+    - hard
+    - nfsvers=4.1
+  nfs:
+    path: /tmp
+    server: 172.17.0.2
+	
+	
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myapp-mongo-pvc
+  namespace: myapp-ns
+spec:
+  storageClassName: myapp-sc
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+	  
+TO USE PV FROM AN EBS VOLUME:
+
+vim storageclass.yaml 			**(without storageclass k8s cannot identify the pv from the provisioner)**
+ 
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+reclaimPolicy: Retain
+mountOptions:
+  - debug
+volumeBindingMode: Immediate
+
+kubectl apply -f storageclass.yaml
+
+vim ebspv.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ens-test
+  labels:
+    type: amazonebs
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadWriteOnce
+  awsElasticBlockStore:
+    volumeID: vol-0075f563438a3fb61
+    fsType: ext4
+	
+ kubectl apply ebspv.yaml
+ 
+ 
+ vim ebspvc.yaml
+ 
+ apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-ebs
+spec:
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+kubectl apply ebspvc.yaml
+
+vim ebspod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: poddy
+  labels:
+    app: mongo
+spec:
+  containers:
+  - name: mongo-pod
+    image: mongo
+    ports:
+    - containerPort: 27017
+  volumes:
+  - name: ens-test
+    persistentVolumeClaim:
+      claimName: pvc-ebs
+
+kubectl apply -f enspod.yaml
+
+
+
+
+HOSTPATH:
+
+vim hostpv.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hostpath-pv
+spec:
+  storageClassName: manual
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 2Gi
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: "/mnt/data"
+
+kubectl apply -f hostpv.yaml
+
+vim hostpvc.yaml
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvchost
+spec:
+  storageClassName: manual
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+kubectl apply -f hostpvc.yaml
+
+vim nginx-pod.yaml
+  
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  labels:
+    type: web
+spec:
+  containers:
+  - name: nginx-pod
+    image: nginx:1.8
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: hostpath-pv
+      mountPath: /mnt/data
+  volumes:
+    - name: hostpath-pv
+      persistentVolumeClaim:
+        claimName: pvchost
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: serv-host
+spec:
+  selector:
+    type: web
+  type: NodePort
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    nodePort: 30005
+
+
+kubectl apply nginx-pod.yaml
+
+verify the location /mnt/data in worker and in pod    
+  
+ ===================================================================================================
+						STATEFULSETS
+====================================================================================================
+vim secrets.yaml
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret1
+data:
+  MONGO_INITDB_ROOT_PASSWORD: Q3RlbEAxMjM=
+  MONGO_INITDB_USER: c2Fpa2lyYW4=
+  MONGO_INITDB_PASSWORD: U2Fpa2lyYW5AMDgyNw==
+
+
+vim configmap.yaml
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: post-conf
+data:
+  MONGO_INITDB_DB: testing-db
+
+
+vim service.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: service1
+spec:
+  type: ClusterIP
+  ports:
+  - targetPort: 5432
+    port: 5432
+  selector:
+    hi: iam
+
+
+vim statefulset.yaml
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo-statefulset
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      hi: iam
+  serviceName: "service1"
+  template:
+    metadata:
+      labels:
+        hi: iam
+    spec:
+      volumes:
+        - name: pv-volume
+          persistentVolumeClaim:
+            claimName: pvc1
+      containers:
+      - name: mongo-pod
+        image: mongo
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: pv-volume
+          mountPath: /data/
+        env:
+        - name: mongodbuser
+          valueFrom:
+            secretKeyRef:
+              key: MONGO_INITDB_USER
+              name: secret1
+        - name: mongodbpassword
+          valueFrom:
+            secretKeyRef:
+              key: MONGO_INITDB_PASSWORD
+              name: secret1
+        - name: mongorootpassword
+          valueFrom:
+            secretKeyRef:
+              key: MONGO_INITDB_ROOT_PASSWORD
+              name: secret1
+        - name: mongodatabase
+          valueFrom:
+            configMapKeyRef:
+              key: MONGO_INITDB_DB
+              name: post-conf
+
+kubectl apply -f secret.yaml
+kubectl apply -f configmap.yaml
+kubectl apply -f service.yaml
+kubectl apply -f statefulset.yaml		  
+
+
+kubectl get pods
+kubectl exec -it mongo-statefulet-0 /bin/bash
+
+==============================================================================================
+
+vim pv.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-stat-1
+spec:
+  storageClassName: manual
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 200Mi
+  hostPath:
+    path: "/mnt/pv1"
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-stat-2
+spec:
+  storageClassName: manual
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 200Mi
+  hostPath:
+    path: "/mnt/pv2"
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-stat-3
+spec:
+  storageClassName: manual
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 200Mi
+  hostPath:
+    path: "/mnt/pv3"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-stat-4
+spec:
+  storageClassName: manual
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 200Mi
+  hostPath:
+    path: "/mnt/pv4"
+
+kubectl apply -f pv.yaml 
+
+
+vim nginx-statefulset.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: service1
+  labels:
+    hello: happy
+spec:
+  ports:
+  - port: 80
+  clusterIP: None
+  selector:
+    hello: happy
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: state-set
+  labels:
+    hello: happy
+spec:
+  selector:
+    matchLabels:
+      hello: happy
+  serviceName: service1
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        hello: happy
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.8
+        volumeMounts:
+        - name: www
+          mountPath: /var/www/
+
+  volumeClaimTemplates:
+  - metadata:
+      name: www
+    spec:
+      storageClassName: manual
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 100Mi
+
+
+
+kubectl apply -f nginx-statefulset.yaml
+
+
+
+

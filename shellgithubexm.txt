@@ -1,0 +1,12 @@
+https://github.com/NishkarshRaj/Automation-using-Shell-Scripts/tree/master/Automation%20Scenarios%20that%20save%20effort
+https://github.com/techarkit/shell-scripting-tutorial
+https://github.com/Piyushvishnoi/AUTOMATION-using-SHELL-SCRIPTING
+https://github.com/ccnokes/automate-daily-development-tasks-with-bash
+https://github.com/topics/automation-scripts
+https://github.com/x0n4d0/automating
+https://github.com/himanshub16/MyScripts
+https://github.com/awesome-lists/awesome-bash
+https://github.com/khaeru/py
+https://github.com/epety/100-shell-script-examples
+https://github.com/topics/shell-scripts
+https://github.com/topics/shell-script

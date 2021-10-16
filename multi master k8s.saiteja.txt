@@ -1,0 +1,227 @@
+https://www.linuxtechi.com/setup-highly-available-kubernetes-cluster-kubeadm/hostnamectl set-hostname  k8s-master-1  \\ Reference site
+
+  3 Masters \\ 1 worker \ 1 HAProxy
+  
+hostnamectl set-hostname  k8s-master-1
+hostnamectl set-hostname  k8s-master-2
+hostnamectl set-hostname  k8s-master-3
+hostnamectl set-hostname  k8s-worker-1
+hostnamectl set-hostname  vip-k8s-master
+ 
+ 
+# cat <<EOF>> /etc/hosts
+172.31.12.164 k8s-master-1  255
+172.31.11.139 k8s-master-2  254
+172.31.5.161  k8s-master-3  253
+172.31.30.48  k8s-worker-1
+172.31.24.204 vip-k8s-master
+EOF
+
+uncomment the rootpermit in sshd.config
+paswswd auth yes
+systemctl restart sshd
+passwd root 
+Cetl@123
++++++++++++++++++++++++++++++++++++++
+
+Install and Configure Keepalive and HAProxy on all master / control plane nodes
+
+ yum install haproxy keepalived -y
+
+sudo vim /etc/keepalived/check_apiserver.sh
+
+#!/bin/sh
+APISERVER_VIP=172.31.24.204
+APISERVER_DEST_PORT=6443
+
+errorExit() {
+    echo "*** $*" 1>&2
+    exit 1
+}
+
+curl --silent --max-time 2 --insecure https://localhost:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET https://localhost:${APISERVER_DEST_PORT}/"
+if ip addr | grep -q ${APISERVER_VIP}; then
+    curl --silent --max-time 2 --insecure https://${APISERVER_VIP}:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET https://${APISERVER_VIP}:${APISERVER_DEST_PORT}/"
+fi
+
+save nd exit
+
+sudo chmod +x /etc/keepalived/check_apiserver.sh
+
+Take the backup of keepalived.conf file and then truncate the file.
+
+ sudo cp /etc/keepalived/keepalived.conf /etc/keepalived/keepalived.conf-org
+ 
+ sudo sh -c '> /etc/keepalived/keepalived.conf'
+ 
+ sudo vim /etc/keepalived/keepalived.conf
+ 
+ ! /etc/keepalived/keepalived.conf
+! Configuration File for keepalived
+global_defs {
+    router_id LVS_DEVEL
+}
+vrrp_script check_apiserver {
+  script "/etc/keepalived/check_apiserver.sh"
+  interval 3
+  weight -2
+  fall 10
+  rise 2
+}
+
+vrrp_instance VI_1 {
+    state MASTER
+    interface enp0s3
+    virtual_router_id 151
+    priority 255
+    authentication {
+        auth_type PASS
+        auth_pass P@##D321!
+    }
+    virtual_ipaddress {
+        172.31.24.204/24
+    }
+    track_script {
+        check_apiserver
+    }
+}
+
+:wq
+
+sudo cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg-org
+
+Remove all lines after default section and add following lines
+
+sudo vim /etc/haproxy/haproxy.cfg
+
+#---------------------------------------------------------------------
+# apiserver frontend which proxys to the masters
+#---------------------------------------------------------------------
+frontend apiserver
+    bind *:8443
+    mode tcp
+    option tcplog
+    default_backend apiserver
+#---------------------------------------------------------------------
+# round robin balancing for apiserver
+#---------------------------------------------------------------------
+backend apiserver
+    option httpchk GET /healthz
+    http-check expect status 200
+    mode tcp
+    option ssl-hello-chk
+    balance     roundrobin
+	   server k8s-master-1 172.31.12.164:6443 check
+       server k8s-master-2 172.31.11.139:6443 check
+       server k8s-master-3 172.31.5.161:6443 check
+	   
+:wq
+
+++++++++++++++++++++++++++++++++++
+
+Now copy theses three files (check_apiserver.sh , keepalived.conf and haproxy.cfg) from k8s-master-1 to k8s-master-2 & 3
+
+Run the following for loop to scp these files to master 2 and 3
+
+for f in k8s-master-2 k8s-master-3; do scp /etc/keepalived/check_apiserver.sh /etc/keepalived/keepalived.conf root@$f:/etc/keepalived; scp /etc/haproxy/haproxy.cfg root@$f:/etc/haproxy; done
+
+sudo systemctl enable keepalived --now
+sudo systemctl enable haproxy --now
+
+setenforce 0
+sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+ reboot
+
+sudo modprobe br_netfilter
+sudo sh -c "echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables"
+sudo sh -c "echo '1' > /proc/sys/net/ipv4/ip_forward"
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ Install Container Run Time (CRI) Docker on Master & Worker Nodes
+ 
+
+need to create a file in all masters 
+ vim /etc/docker/daemon.json
+
+{
+"exec-opts": ["native.cgroupdriver=systemd"]
+}
+
+
+sudo yum remove docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-engine
+				  
+
+ sudo yum install -y yum-utils
+ sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+ sudo yum install docker-ce -y
+ sudo systemctl enable docker --now
+ +++++++++++++++++++++++++++++++++++++++++++
+ Install Kubeadm, kubelet and kubectl
+ 
+ cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+exclude=kubelet kubeadm kubectl
+EOF
+
+sudo yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+systemctl enable kubelet --now
+
+kubeadm init --control-plane-endpoint "172.31.24.204:8443" --upload-certs
+
+	kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+
+								or
+	sudo kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+ now we get a Two tokens 
+ 
+ 1st token copy to all masters
+ 2nd tokens copy to all nodes
+   
+ kubectl get nodes
+ 
+ [kadmin@k8s-master-1 ~]$ kubectl get nodes
+NAME           STATUS   ROLES    AGE     VERSION
+k8s-master-1   Ready    master   31m     v1.18.6
+k8s-master-2   Ready    master   10m     v1.18.6
+k8s-master-3   Ready    master   3m47s   v1.18.6
+
+
+ kubectl get pods -n kube-system
+ 
+ Test Highly available Kubernetes cluster
+ 
+ cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+exclude=kubelet kubeadm kubectl
+EOF
+
+sudo yum install -y  kubectl --disableexcludes=kubernetes
+
+$ mkdir -p $HOME/.kube
+$ scp root@192.168.1.40:/etc/kubernetes/admin.conf $HOME/.kube/config
+$ sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+[kadmin@localhost ~]$ kubectl get nodes
+NAME           STATUS   ROLES    AGE    VERSION
+k8s-master-1   Ready    master   3h5m   v1.18.6
+k8s-master-2   Ready    master   163m   v1.18.6
+k8s-master-3   Ready    master   157m   v1.18.6
+k8s-worker-1   Ready    <none>   148m   v1.18.6

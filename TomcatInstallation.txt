@@ -6,19 +6,19 @@
 	sudo apt update
 	sudo apt install default-jdk
 	sudo groupadd tomcat
-	sudo useradd -s /bin/false -g tomcat -d /opt/tomcat tomcat
+	sudo useradd -s /bin/false -g tomcat -d /opt/tomcat1 tomcat
 	cd /tmp
 	curl -O https://mirrors.estointernet.in/apache/tomcat/tomcat-9/v9.0.50/bin/apache-tomcat-9.0.50.tar.gz
-	sudo mkdir /opt/tomcat
-	sudo tar xzvf apache-tomcat-*tar.gz -C /opt/tomcat --strip-components=1
-	cd /opt/tomcat
-	sudo chgrp -R tomcat /opt/tomcat
+	sudo mkdir /opt/tomcat1
+	sudo tar xzvf apache-tomcat-*tar.gz 
+	cd /opt/tomcat1
+	sudo chgrp -R tomcat /opt/tomcat1
 	sudo chmod -R g+r conf
 	sudo chmod g+x conf
 	sudo chown -R tomcat webapps/ work/ temp/ logs/
 	sudo update-java-alternatives -l
 	java-1.11.0-openjdk-amd64       1081      " /usr/lib/jvm/java-1.11.0-openjdk-amd64"  <---- COPY THIS
-	sudo vi /etc/systemd/system/tomcat.service
+	sudo vi /etc/systemd/system/tomcat1.service
 	
 [Unit]
 Description=Apache Tomcat Web Application Container
@@ -28,14 +28,14 @@ After=network.target
 Type=forking
 
 Environment=JAVA_HOME=<COPY JAVA PATH HERE>
-Environment=CATALINA_PID=/opt/tomcat/temp/tomcat.pid
-Environment=CATALINA_HOME=/opt/tomcat
-Environment=CATALINA_BASE=/opt/tomcat
+Environment=CATALINA_PID=/opt/tomcat1/temp/tomcat.pid
+Environment=CATALINA_HOME=/opt/tomcat1
+Environment=CATALINA_BASE=/opt/tomcat1
 Environment='CATALINA_OPTS=-Xms512M -Xmx1024M -server -XX:+UseParallelGC'
 Environment='JAVA_OPTS=-Djava.awt.headless=true -Djava.security.egd=file:/dev/./urandom'
 
-ExecStart=/opt/tomcat/bin/startup.sh
-ExecStop=/opt/tomcat/bin/shutdown.sh
+ExecStart=/opt/tomcat1/bin/startup.sh
+ExecStop=/opt/tomcat1/bin/shutdown.sh
 
 User=tomcat
 Group=tomcat
@@ -48,18 +48,184 @@ WantedBy=multi-user.target
 
 
 	sudo systemctl daemon-reload
-	sudo systemctl start tomcat
-	sudo systemctl status tomcat
+	sudo systemctl start tomcat1.service
+	sudo systemctl status tomcat1.service
 	sudo ufw allow 8080
-	sudo systemctl enable tomcat
+	sudo systemctl enable tomcat1.service
 
-	sudo vi /opt/tomcat/conf/tomcat-users.xml
+	sudo vi /opt/tomcat1/conf/tomcat-users.xml
 	
 	For the Manager app, type:
-	sudo vi /opt/tomcat/webapps/manager/META-INF/context.xml
+	sudo vi /opt/tomcat1/webapps/manager/META-INF/context.xml
 
 	For the Host Manager app, type:
-	sudo vi /opt/tomcat/webapps/host-manager/META-INF/context.xml
+	sudo vi /opt/tomcat1/webapps/host-manager/META-INF/context.xml
 	
-	sudo systemctl restart tomcat
+	sudo systemctl restart tomcat1.service
+
+===============================================================
+	WAR FILE DEPLOYMENT
+===============================================================
+	Using maven pack the whole code as .war/.jar/.ear file, 
+		Go to code location which should consists of pom.xml file 
+		mvn package 
+		After building the code it gives output as <filename.war for ex. webapp.war>
+		cp -r webapp.war /opt/tomcat1/webapps/
+		
+========================================
+To Host the multiple Tomcat Services:
+========================================
+cp /opt/tomcat1  /opt/tomcat2
+
+sudo nano /opt/tomcat1/conf/server.xml
+
+Change the Shutdown port
+Change the connector port <Any services should not have same port for same IP, So change the port>
+
+for tomcat 1st service: (/opt/tomcat1/conf/server.xml)
+	
+	<Server port="8005" shutdown="SHUTDOWN">
+  <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+  .....
+  .....
+  .....
+  <Connector port="8080" protocol="HTTP/1.1"
+               connectionTimeout="20000"
+               redirectPort="8443" />
+			   
+	....
+	....
+	....		##TO CALL THE SERVICE WITH HOSTNAMES####
+	
+	 <Host name="paytm.com"  appBase="webapps"
+            unpackWARs="true" autoDeploy="true">
+
+        <!-- SingleSignOn valve, share authentication between web applications
+             Documentation at: /docs/config/valve.html -->														http://paytm.com/<application name>)
+        <!--
+        <Valve className="org.apache.catalina.authenticator.SingleSignOn" />
+        -->
+
+        <!-- Access log processes all example.
+             Documentation at: /docs/config/valve.html
+             Note: The pattern used is equivalent to using pattern="common" -->
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+               prefix="paytm.com_access_log" suffix=".txt"
+               pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+
+      </Host>
+
+Add the hostnames in /etc/hosts  file
+10.10.10.151  paytm.com
+
+sudo nano /opt/tomcat2/conf/server.xml
+
+	cp -r /opt/tomcat1  /opt/tomcat2
+	sudo chgrp -R tomcat /opt/tomcat2
+	cd /opt/tomcat2
+	sudo chmod -R g+r conf
+	sudo chmod g+x conf
+	sudo chown -R tomcat webapps/ work/ temp/ logs/
+
+for tomcat 2nd service: (/opt/tomcat2/conf/server.xml)
+	
+	<Server port="8006" shutdown="SHUTDOWN">
+  <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+  .....
+  .....
+  .....
+  <Connector port="8090" protocol="HTTP/1.1"
+               connectionTimeout="20000"
+               redirectPort="8443" />
+	....
+	....
+	....
+	 <Host name="zomato.com"  appBase="webapps"
+            unpackWARs="true" autoDeploy="true">
+
+        <!-- SingleSignOn valve, share authentication between web applications
+             Documentation at: /docs/config/valve.html -->													(http://zomato.com/<Application name>)
+        <!--
+        <Valve className="org.apache.catalina.authenticator.SingleSignOn" />
+        -->
+
+        <!-- Access log processes all example.
+             Documentation at: /docs/config/valve.html
+             Note: The pattern used is equivalent to using pattern="common" -->
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+               prefix="zomato.com_access_log" suffix=".txt"		{give prefix}
+               pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+
+      </Host>
+
+
+sudo vi /etc/systemd/system/tomcat2.service
+	
+[Unit]
+Description=Apache Tomcat Web Application Container
+After=network.target
+
+[Service]
+Type=forking
+
+Environment=JAVA_HOME=<COPY JAVA PATH HERE>
+Environment=CATALINA_PID=/opt/tomcat2/temp/tomcat.pid
+Environment=CATALINA_HOME=/opt/tomcat2
+Environment=CATALINA_BASE=/opt/tomcat2
+Environment='CATALINA_OPTS=-Xms512M -Xmx1024M -server -XX:+UseParallelGC'
+Environment='JAVA_OPTS=-Djava.awt.headless=true -Djava.security.egd=file:/dev/./urandom'
+
+ExecStart=/opt/tomcat2/bin/startup.sh
+ExecStop=/opt/tomcat2/bin/shutdown.sh
+
+User=tomcat
+Group=tomcat
+UMask=0007
+RestartSec=10
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+Add the Hostname in /etc/hosts file 
+10.10.10.151   paytm.com
+10.10.10.151  zomato.com
+
+	Restart the PC :-  init 6
+	
+	sudo systemctl daemon-reload
+	sudo systemctl start tomcat2.service
+	sudo systemctl status tomcat2.service
+	sudo ufw allow 8090
+	sudo systemctl enable tomcat2.service
+	
+================================================
+TOMCAT SSL 
+================================================
+
+https://linuxhint.com/tomcat_install_ssl_certificate/
+
+sudo mkdir /etc/keys
+cd /etc/keys
+ufw allow 8443
+sudo keytool -genkey -alias tomcat -keyalg RSA -keystore  tomcat.linuxhint.com.jks
+sudo nano /opt/tomcat/conf/server.xml
+
+Inside the <Service name=”Catalina”> container, add the following lines.
+
+
+<Connector port="8443" maxThreads="150"
+scheme="https" secure="true" SSLEnabled="true"
+keystoreFile="PATH_TO_YOUR_JKS_FILE" keystorePass="YOUR_KEYSTORE_PASSWORD"
+clientAuth="false" keyAlias="YOUR_KEY_ALIAS" sslProtocol="TLS"/>
+
+
+systemctl restart tomcat.service
+systemctl status tomcat.service
+
+
+https://paytm.com:8443
+
+
+https://github.com/vinyll/certbot-install#how-to-install
 

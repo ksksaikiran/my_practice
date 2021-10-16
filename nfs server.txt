@@ -48,7 +48,7 @@ mkdir -p /mnt/backups
 mount -t nfs  10.0.1.233:/mnt/backups /mnt/backups
 mount | grep nfs
 vi /etc/fstab and add below line
-10.20.20.8:/mnt/backups     /mnt/backups  nfs     defaults 0 0"
+10.20.20.8:/mnt/backups     /mnt/backups  nfs     defaults 0 0
 cat /etc/fstab
 
 

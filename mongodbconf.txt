@@ -1,10 +1,10 @@
 
 
-						MONGO CONF
+						MONGO CONF (5.5)
 						
 	curl -fsSL https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -   (if error received install  "sudo apt-get install gnupg")
 	apt-key list
-	echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+	echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
 	sudo apt update
 	sudo apt install mongodb-org
 	sudo systemctl start mongod.service
@@ -41,7 +41,9 @@ Source Blog:    https://docs.mongodb.com/manual/tutorial/install-mongodb-enterpr
 	
 	echo "deb [ arch=amd64,arm64 ] http://repo.mongodb.com/apt/ubuntu xenial/mongodb-enterprise/5.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-enterprise.list
 	
+	for ubuntu 14.04
 	
+	echo "deb [ arch=amd64,arm64 ] http://repo.mongodb.com/apt/ubuntu trusty/mongodb-enterprise/5.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-enterprise.list
 	
 	sudo apt-get update
     sudo apt-get install -y mongodb-enterprise

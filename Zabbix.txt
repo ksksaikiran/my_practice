@@ -1,0 +1,218 @@
+Zabbix:
+
+Zabbix is an enterprise-class open source distributed monitoring solution.
+Zabbix is software that monitors numerous parameters of a network and the health and integrity of servers, virtual machines, 
+applications, services, databases, websites, the cloud and more.
+Zabbix uses a flexible notification mechanism that allows users to configure e-mail based alerts for virtually any event.
+
+Zabbix has the major software components to monitor:
+
+1. Server
+2. Agent
+3. proxy
+4. Database
+4. Web Service 
+
+It is comprissed in to three components:
+1. Zabbix Server
+2. Web Frontend
+3. Database Storage
+
+The Server is the central repository which stores all the configs, statistics and operational data.
+The zabbix Server is a central component which performs polling trapping of data, and it calculates triggers and notifications to the users, 
+zabbix agents and proxies reports data to zabbix server on availability and intergrity of systems.
+
+The zabbix Agent is installed on monitoring server to monitor the local resources and applications (hard drives, memory, processor statistics etc).
+Zabbix agent is very efficient because it uses native system calls for gathering info, This Agent Gathers the info from local system and reports to Zabbix Server and
+ then zabbix server notifices users.
+zabbx Agents checks in two ways:
+1.Passive checks:
+	Passive checks means Zabbix server asks the data to agent and agent sends back the data for requested.
+2. Active checks:
+	Active checks means zabbix servers sents a list of processes for monitoring to agent and agents checks the processes one by one and sends the new values to server. 
+
+Zabbix Proxy:
+	Zabbix Proxy is the component that collects the monitoring data from one or more monitoring devices and sends to the Zabbix server. Proxy collects the data and buffers
+ the data locally and then tranfers it to the Zabbix Server.
+	A Zabbix proxy is the ideal solution for centralized monitoring of remote locations, branches and networks with no local administrators.
+	Deploying Proxy is optional, but it will be beneficial as proxy distributes the load on Zabbix server as it process the data it will help for less cpu usage and disk i/o on the server 
+Zabbix Sender:
+	Zabbix sender is a command line utility that may be used to send performance data to Zabbix server for processing.
+	The utility is usually used in long running user scripts for periodical sending of availability and performance data.
+Zabbix Get:
+	Zabbix get is a command line utility which can be used to communicate with Zabbix agent and retrieve required information from the agent.
+	The utility is usually used for the troubleshooting of Zabbix agents.	
+
+Zabbix web service:
+	Zabbix web service is a process that is used for communication with external web services. 
+	Currently,Zabbix web service is used for generating and sending scheduled reports with plans to add additional functionality in the future.
+	Zabbix server connects to the web service via HTTP(S). Zabbix web service requires Google Chrome to be installed on the same host;
+	 on some distributions the service may also work with Chromium
+
+
+==================================================================
+			INSTALLATION OF ZABBIX
+==================================================================
+
+
+sudo apt update
+sudo apt install apache2 libapache2-mod-php
+sudo apt install mysql-server
+sudo apt install php php-mbstring php-gd php-xml php-bcmath php-ldap php-mysql
+sudo mysql_secure_installation
+
+vim /etc/php/7.4/apache2/php.ini
+edit the below confs:
+
+memory_limit 256M
+upload_max_filesize 16M
+post_max_size 16M
+max_execution_time 300
+max_input_time 300
+max_input_vars 10000
+date.timezone = 'Asia/Kolkata'
+
+wget https://repo.zabbix.com/zabbix/5.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_5.0-1+focal_all.deb
+sudo dpkg -i zabbix-release_5.0-1+focal_all.deb
+sudo apt update
+sudo apt install zabbix-server-mysql zabbix-frontend-php zabbix-agent zabbix-apache-conf
+
+apt install mysql-server
+systemctl start mysql
+systemctl status mysql
+mysql -u root -p
+create database zabbix character set utf8 collate utf8_bin;
+create user 'zabbixdb' identified by 'cteladmin';
+grant all privileges on zabbix.* to 'zabbixdb';
+FLUSH PRIVILEGES;
+
+cd /usr/share/doc/zabbix-server-mysql
+zcat create.sql.gz | mysql -u zabbixctel -p zabbix
+sudo vi /etc/zabbix/zabbix_server.conf
+ 
+  DBHost=localhost
+  DBName=zabbixdb
+  DBUser=zabbix
+  DBPassword=password
+  
+sudo systemctl enable zabbix-server
+sudo systemctl restart zabbix-server
+sudo systemctl restart apache2
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-port=10050/tcp
+sudo firewall-cmd --permanent --add-port=10051/tcp
+sudo firewall-cmd --reload
+
+
+http://localhost/zabbix
+
+    Database type		MySQL
+    Database server		localhost
+    Database port		33060
+    Database name		zabbix
+    Database user		zabbix
+    Database password 	cteladmin
+    Database TLS encryption   false
+     
+    Zabbix server		localhost
+    Zabbix server port  10051
+    Zabbix server name	ctel
+
+=========================================================================================================
+		CONFIGURING ZABBIX AGENT
+=========================================================================================================
+
+
+wget http://repo.zabbix.com/zabbix/3.4/ubuntu/pool/main/z/zabbix-release/zabbix-release_3.4-1+xenial_all.deb
+sudo dpkg -i zabbix*all.deb
+sudo apt-get update
+sudo apt-get install zabbix-agent
+sudo sh -c "openssl rand -hex 32 > /etc/zabbix/zabbix_agentd.psk"
+
+cat /etc/zabbix/zabbix_agentd.psk
+You'll need to copy that key, as it'll be pasted into the web-based GUI later.
+
+TLSKEYFILE key: b69f7d2ff9756728ed56bfd531fc6412313761afca9a6c8598597d6738ded984           //copy this key and save
+
+sudo nano /etc/zabbix/zabbix_agentd.conf
+
+The first setting to change is:
+
+Server=127.0.0.1		Change that to:			Server=ZABBIX_MONITOR		// where ZABBIX_MONITOR is the IP address of the Zabbix Monitor server.
+
+Scroll down until you see the TLSConnect section. At the bottom of that section, add the following:
+
+TLSConnect=psk
+
+Next locate the TLSAccept section and add the following to the bottom:
+
+#TLSAccept=encrypted     change that to:        TLSAccept=psk          
+
+Now locate the TLSPSKIdentity section and add the following to the bottom:
+
+TLSPSKIdentity=PSK 001
+
+Finally, locate the TLSPSKFile section and add the following to the bottom:
+
+TLSPSKFile=/etc/zabbix/zabbix_agentd.psk
+
+Save and close that file. Restart and enable the Zabbix agent with the commands:
+
+systemctl start zabbix-agent
+systemctl enable zabbix-agent
+systemctl restart zabbix-agent.service
+systemctl status zabbix-agent.service
+
+
+
+
+
+=========================================================================================================
+INSTALLATION FROM THE SOURCE
+=========================================================================================================
+
+wget https://cdn.zabbix.com/zabbix/sources/stable/5.4/zabbix-5.4.3.tar.gz
+tar -zxvf zabbix-5.4.3.tar.gz
+addgroup --system --quiet zabbix
+adduser --quiet --system --disabled-login --ingroup zabbix --home /var/lib/zabbix --no-create-home zabbix
+mkdir -m u=rwx,g=rwx,o= -p /var/lib/zabbix
+chown zabbix:zabbix /var/lib/zabbix
+apt install mysql-server
+systemctl start mysql
+systemctl status mysql
+mysql -u root -p
+create database zabbix character set utf8 collate utf8_bin;
+create user 'zabbixctel' identified by 'Ctel@123';
+grant all privileges on zabbix.* to 'zabbixctel';
+FLUSH PRIVILEGES;
+
+./configure --help
+./configure --enable-server --enable-agent --with-mysql --enable-ipv6 --with-net-snmp --with-libcurl --with-libxml2 --with-openipmi
+./configure --enable-agent
+CFLAGS="+DD64" ./configure --enable-agent --with-libpcre-include=/usr/local/include --with-libpcre-lib=/usr/local/lib/hpux64
+
+
+
+
+
+
+=====================================================
+TROUBLESHOOTING
+======================================================
+
+ 34968:20210830:153529.323 failed to accept an incoming connection: from 10.10.10.151: TLS 
+ handshake set result code to 1: file ../ssl/statem/extensions.c line 1618: error:141FA0FD:SSL 
+ routines:tls_psk_do_binder:binder does not verify: TLS write fatal alert "illegal parameter"
+ 
+ solution:  
+			make SERVER= IP of your server								# Incoming connections will be accepted only from the hosts listed here.
+			ListenIP=IP of your server									# List of comma delimited IP addresses that the agent should listen on.
+			ListenPort=10050											# Agent will listen on this port for connections from the server.
+			ServerActive=10.10.10.151:10051								# List of comma delimited IP:port (or DNS name:port) pairs of Zabbix servers and Zabbix proxies for active checks.
+																		  If port is not specified, default port is used.
+			Hostname=ZabbixAgent										# Required for active checks and must match hostname as configured on the server.
+
+
+
+
+			

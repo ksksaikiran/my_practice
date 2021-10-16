@@ -1,0 +1,63 @@
+
+
+
+
+ kubectl get nodes
+ kubectl get -o nodes
+ kubectl get pods
+ kubectl get pods -o wide
+ kubectl apply -f deployment.yaml
+ kubectl get service
+ kubectl get deployment
+ 
+ =============================================
+ Running Operations directly on the YAML file
+ =============================================
+ SYNTAX: kubectl [OPERATION] -f [FILE-NAME.yaml]
+ kubectl get -f [FILE-NAME.yaml]
+ kubectl describe -f [FILE-NAME.yaml]
+ kubectl edit -f [FILE-NAME.yaml]
+ kubectl delete -f [FILE-NAME.yaml]
+ kubectl create -f [FILE-NAME.yaml]
+ 
+ ==========================
+ Display Replicaset
+ ==========================
+ 
+ kubectl get rs
+ kubectl get rs <rs name> -o wide
+ kubectl get rs <rs name> -o yaml
+ kubectl get rs -l <labelname ex: dep>
+ kubectl describe rs <RS-name>
+ kubectl scale <RS-name> --replicas=[COUNT]
+ kubectl edit  rs deployment1-588b99f489
+
+ 
+ ============================
+ Displaying Pods
+ ============================
+ 
+ kubectl get pods
+ kubectl get pods -o wide
+ kubectl get pods -l <label name ex: dep>
+ kubectl get pods --show-labels
+ 
+ ========================================
+ kubectl get deployments
+ kubectl delete deployment deployment1
+ 
+ ========================================
+ CONFIGMAPS
+ ========================================
+
+ kubectl create configmap myconfig1 --dry-run=client -o yaml > avengers.yaml
+ vim avengers.yaml
+ kubectl apply -f avengers.yaml
+ kubectl describe configmaps myconfig1
+ kubectl run avengers --image=nginx --dry-run=client -o yaml > avenge.yaml
+ vim avenge.yaml
+ kubectl apply -f avenge.yaml
+ kubectl get pods
+ 
+
+

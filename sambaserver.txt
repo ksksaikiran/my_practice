@@ -1,0 +1,46 @@
+
+SAMBA SERVER on Ubuntu 20.04
+
+apt update
+apt install samba
+whereis samba
+useradd samba
+passwd samba
+mkdir /home/ctel/sambashare/
+sudo nano /etc/samba/smb.conf
+
+[sambashare]
+    comment = Samba on Ubuntu
+    path = /home/username/sambashare
+    read only = no
+    browsable = yes
+	
+sudo service smbd restart
+sudo ufw allow samba
+sudo smbpasswd -a ctel
+cd /home/ctel
+ls
+cd sambashare/
+ls
+touch kiran
+
+To connect from windows:
+
+This PC >> Network >> Map Network Drive >> enter IP and sambafolder name (\\10.10.10.151\sambashare) >> check connect using different credentials >> finish
+
+
+
+To provide the permissions to write or append to the file,
+
+nano /etc/samba/smb.conf
+
+[kiran]
+comment = Samba share on ubuntu
+user = @ctel
+path = /home/ctel/sambashare/
+read only = no
+writable = yes
+browsable = yes
+create mask = 0700
+Directory mask = 0700
+veto files = /*.txt,/*.mp3,/*.php,/*.html

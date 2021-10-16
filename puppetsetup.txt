@@ -1,0 +1,120 @@
+puppet Installation and setup
+
+on server machine:
+hostnamectl set-hostname puppetmaster
+
+on client machine:
+hostnamectl set-hostname puppetclient
+
+on server machine:
+vim /etc/hosts
+10.0.1.36 puppetmaster
+10.0.1.71 puppetclient
+
+on client machine:
+vim /etc/hosts
+10.0.1.36 puppetmaster
+10.0.1.71 puppetclient
+
+on server machine:
+
+yum update
+yum -y install ntp ntpdate
+sudo ntpdate 0.centos.pool.ntp.org
+sudo systemctl start ntpd
+sudo systemctl enable ntpd
+vim /etc/sysconfig/selinux
+set ---->>> SELINUX=disabled
+
+rpm -Uvh https://yum.puppetlabs.com/puppet5/puppet5-release-el-7.noarch.rpm
+sudo yum -y install puppetserver
+vim /etc/sysconfig/puppetserver
+
+edit as this changes: -Xms2g to -Xms512m ,-Xmx2g to -Xmx512m ,  add -XX:MaxPermSize=256m, 
+# Location of your Java binary (version 8)
+JAVA_BIN="/usr/bin/java"
+
+# Modify this if you'd like to change the memory allocation, enable JMX, etc
+JAVA_ARGS="-Xms512m -Xmx512m -XX:MaxPermSize=256m"
+#-Djruby.logger.class=com.puppetlabs.jruby_utils.jruby.Slf4jLogger"
+
+or if you have good configuration in machine like 4gb of RAM
+
+# Location of your Java binary (version 7 or higher)
+JAVA_BIN="/usr/bin/java"
+
+# Modify this if you'd like to change the memory allocation, enable JMX, etc
+JAVA_ARGS="-Xms2g -Xmx2g -XX:MaxPermSize=256m"
+
+
+vim /etc/puppetlabs/puppet/puppet.conf
+[master]
+ dns_alt_names=puppet,puppetmaster
+ 
+ [main]
+ certname = puppetcert
+ server = puppet
+ environment = production        
+ runinterval = 1h
+
+
+firewall-cmd --add-port=8140/tcp --permanent
+firewall-cmd --reload
+
+set the path of the puppet:
+vim ~/.bashrc
+export PATH=/opt/puppetlabs/bin/:$PATH
+source ~/.bashrc
+
+systemctl start puppetserver
+systemctl enable puppetserver
+
+on client machine:
+
+
+yum update
+yum -y install ntp ntpdate
+sudo ntpdate 0.centos.pool.ntp.org
+sudo systemctl start ntpd
+sudo systemctl enable ntpd
+vim /etc/sysconfig/selinux
+set ---->>> SELINUX=disabled
+
+rpm -Uvh https://yum.puppetlabs.com/puppet5/puppet5-release-el-7.noarch.rpm
+yum install -y puppet-agent
+vim /etc/puppetlabs/puppet/puppet.conf
+[main]
+ certname = puppetclient1
+ server = puppet
+ environment = production
+ runinterval = 1h
+
+
+/opt/puppetlabs/bin/puppet resource service puppet ensure=running enable=true
+
+
+
+ON THE MASTER
+
+/opt/puppetlabs/bin/puppet cert list
+/opt/puppetlabs/bin/puppet cert list --all
+/opt/puppetlabs/bin/puppet cert sign <client certificate name>
+
+/opt/puppetlabs/bin/puppet agent --test
+
+
+
+
+  telnet puppet 8104
+   telnet puppet 8140
+   puppet agent -t
+   puppet help waitforcert
+   puppet help
+   puppet help ca
+  puppet ca generate puppetclient1
+   puppet ca print
+   puppet ca print puppetclient1
+   puppet ca verify  puppetclient1
+   puppet ca destroy puppetclient1
+top
+  puppet agent -t

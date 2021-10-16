@@ -27,3 +27,58 @@ PATH=$PATH:$JAVA_HOME/bin
 
 To uninstall:
 	sudo apt remove openjdk-8-jdk
+	
+	
+	
+	
+	
+	
+	
+JAVA MANUALLY INSTALLATION
+
+Download java software from official page
+cd /home/ctel/Downloads
+extract the tar file
+tar -xvf jdk-16.0.2_linux-x64_bin.tar.gz 
+nano /etc/profile.d/jdk.sh
+ADD the below lines:  
+  
+export JAVA_HOME=/home/ctel/Downloads/jdk-16.0.2
+export PATH=$PATH:$JAVA_HOME/bin
+
+source /etc/profile
+java -version
+
+
+
+
+sudo nano /etc/environment
+JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64/bin/java"
+
+
+
+
+---------------------
+MAVEN HOME PATH SETUP
+---------------------
+
+java -version
+
+apt install maven
+	or
+wget https://mirrors.estointernet.in/apache/maven/maven-3/3.8.2/binaries/apache-maven-3.8.2-bin.tar.gz
+
+sudo tar xf /tmp/apache-maven-*.tar.gz -C /opt
+
+sudo nano /etc/profile.d/maven.sh
+
+add these lines
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/
+export M2_HOME=/opt/maven/maven		(MAVEN LOCATION)
+export MAVEN_HOME=/opt/maven/maven
+export PATH=${M2_HOME}/bin:${PATH}
+
+sudo chmod +x /etc/profile.d/maven.sh
+source /etc/profile.d/maven.sh
+mvn -version
+
