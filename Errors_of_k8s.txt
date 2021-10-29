@@ -1,0 +1,178 @@
+Mounting s3 bucket on ec2-instance
+
+
+for awsCLI:
+
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+
+
+sudo yum update
+sudo yum install automake fuse fuse-devel gcc-c++ git libcurl-devel libxml2-devel make openssl-devel
+git clone https://github.com/s3fs-fuse/s3fs-fuse.git
+
+=============================================================================================
+ERRORS:
+
+kubectl apply -f pod-test.yaml
+Unable to connect to the server: x509: certificate signed by unknown authority (possibly because of "crypto/rsa: verification error" 
+while trying to verify candidate authority certificate "kubernetes")
+
+kubectl get pods -n kube-system
+Unable to connect to the server: x509: certificate signed by unknown authority (possibly because of "crypto/rsa: verification error"
+ while trying to verify candidate authority certificate "kubernetes")
+
+RESOLUTION:
+ rm $HOME/.kube/* -rf
+ cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+ chown $(id -u):$(id -g) $HOME/.kube/config
+ --------------------
+ERROR:
+#kubectl get pods
+ Unable to connect to the server: x509: certificate is valid for 10.96.0.1, 10.0.1.252, not 10.0.1.253
+
+RESOLUTION:
+ rm $HOME/.kube/* -rf
+ cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+ chown $(id -u):$(id -g) $HOME/.kube/config
+
+==============================================================================================
+
+ERROR: If PVC is in pending state in nfs dynamic provisioning,
+
+vim /etc/kubernetes/manifests/kube-apiserver.yaml
+
+RESOLUTION:
+add line
+
+NFS provisioning issue
+  spec:
+  containers:
+  - command:
+    - kube-apiserver
+    - --advertise-address=10.0.1.10
+    - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+    - --feature-gates=RemoveSelfLink=false		//add this line
+
+
+
+==============================================================================
+
+ERROR: If your master or worker node is not pulling images from your private registry
+
+vim /etc/systemd/system/multi-user.target.wants/docker.service
+
+[Service]
+Type=notify
+# the default is not to use systemd for cgroups because the delegate issues still
+# exists and systemd currently does not support the cgroup feature set required
+# for containers run by docker
+#ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+ExecStart=/usr/bin/dockerd --exec-opt native.cgroupdriver=systemd
+ExecReload=/bin/kill -s HUP $MAINPID
+TimeoutSec=0
+RestartSec=2
+Restart=always
+
+
+vim /etc/docker/daemon.json
+
+{
+   "exec-opts":  ["native.cgroupdriver=systemd"]
+}
+
+			or
+{
+  "insecure-registries": ["mydockerregistry.com:5000"]
+}
+
+===============================================================================
+
+
+
+
+ERROR:
+
+ kubelet_node_status.go:93] "Unable to register node with API server" err="Post \"https://
+Oct 20 06:08:31 master kubelet[32722]: E1020 06:08:31.352662   32722 kubelet.go:2407] "Error getting node" err="node \"master\" not found"
+Oct 20 06:08:31 master kubelet[32722]: E1020 06:08:31.453256   32722 kubelet.go:2407] "Error getting node" err="node \"master\" not found"
+
+
+
+
+===============================================================================
+
+
+ERROR:
+
+The connection to the server 10.0.1.28:6443 was refused - did you specify the right host or port?
+
+If you have admin.conf files, 
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+                OR
+
+This works when the if files are lost... admin.conf, scheduler.conf, kubelet.conf,  scheduler.conf
+
+cd /etc/kubernetes
+kubectl get nodes
+export KUBECONFIG=/etc/kubernetes/admin.conf
+rm -rfv /etc/kubernetes/admin.conf
+kubeadm --help
+kubeadm kubeconfig --help
+kubeadm --help
+kubeadm init --help
+kubeadm init --help | less
+kubeadm init phase --help | less
+kubeadm init phase kubeconfig --help | less
+kubeadm init phase kubeconfig admin --help | less
+
+#if you lost your admin.conf file
+kubeadm init phase kubeconfig admin --apiserver-advertise-address 10.0.1.75 --cert-dir=/etc/kubernetes/pki
+
+
+#if you lost your scheduler.conf file
+kubeadm init phase kubeconfig scheduler --apiserver-advertise-address 10.0.1.75 --cert-dir=/etc/kubernetes/pki
+
+#if you lost your kubelet.conf file
+kubeadm init phase kubeconfig kubelet --apiserver-advertise-address 10.0.1.75 --cert-dir=/etc/kubernetes/pki
+
+#if you lost your scheduler.conf file
+kubeadm init phase kubeconfig controller-manager --apiserver-advertise-address 10.0.1.75 --cert-dir=/etc/kubernetes/pki
+
+#if you lost your all files.
+kubeadm init phase kubeconfig all --apiserver-advertise-address 10.0.1.75 --cert-dir=/etc/kubernetes/pki
+
+
+kubectl get nodes
+
+
+#If you have lost pki  all cerificates 
+kubeadm init phase certs  --help
+kubeadm init phase certs all --apiserver-advertise-address 10.0.1.75 --cert-dir=/etc/kubernetes/pki
+
+
+
+=============================================================================
+
+ERROR:
+  Error from server: error dialing backend: open /etc/kubernetes/pki/apiserver-kubelet-client.crt: no such file or directory
+
+Kubelet client certificate rotation fails
+
+By default, kubeadm configures a kubelet with automatic rotation of client certificates by using the /var/lib/kubelet/pki/kubelet-client-current.pem 
+symlink specified in /etc/kubernetes/kubelet.conf. If this rotation process fails you might see errors such as x509: certificate has expired or is not yet valid in kube-apiserver logs. 
+To fix the issue you must follow these steps:
+
+    Backup and delete /etc/kubernetes/kubelet.conf and /var/lib/kubelet/pki/kubelet-client* from the failed node.
+    From a working control plane node in the cluster that has /etc/kubernetes/pki/ca.key 
+	execute kubeadm kubeconfig user --org system:nodes --client-name system:node:$NODE > kubelet.conf. $NODE must be set to the name of the existing failed node in the cluster.
+	Modify the resulted kubelet.conf manually to adjust the cluster name and server endpoint, or pass kubeconfig user --config (it accepts InitConfiguration). 
+	If your cluster does not have the ca.key you must sign the embedded certificates in the kubelet.conf externally.
+    Copy this resulted kubelet.conf to /etc/kubernetes/kubelet.conf on the failed node.
+    Restart the kubelet (systemctl restart kubelet) on the failed node and wait for /var/lib/kubelet/pki/kubelet-client-current.pem to be recreated.
+    Run kubeadm init phase kubelet-finalize all on the failed node. This will make the new kubelet.conf file use /var/lib/kubelet/pki/kubelet-client-current.pem and will restart the kubelet.
+    Make sure the node becomes Ready
