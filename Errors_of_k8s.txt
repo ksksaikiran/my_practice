@@ -75,6 +75,21 @@ TimeoutSec=0
 RestartSec=2
 Restart=always
 
+				or
+if you want to add dockers private registry insecurities,
+
+[Service]
+Type=notify
+# the default is not to use systemd for cgroups because the delegate issues still
+# exists and systemd currently does not support the cgroup feature set required
+# for containers run by docker
+#ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+ExecStart=/usr/bin/dockerd --exec-opt native.cgroupdriver=systemd
+Environment='DOCKER_OPTS=--insecure-registry="dockerregistry.com:5000"'
+ExecReload=/bin/kill -s HUP $MAINPID
+TimeoutSec=0
+RestartSec=2
+Restart=always
 
 vim /etc/docker/daemon.json
 
